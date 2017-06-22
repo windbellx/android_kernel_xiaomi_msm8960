@@ -304,12 +304,45 @@ void flash_timer_callback(unsigned long data)
 	mod_timer(&flash_timer, jiffies + msecs_to_jiffies(10000));
 }
 
+#ifdef CONFIG_LEDS_LM3554
+extern int lm3554_flashlight_power(int on);
+extern int lm3554_flashlight_control(int mode);
+#endif
+
 int msm_camera_flash_external(
 	struct msm_camera_sensor_flash_external *external,
 	unsigned led_state)
 {
 	int rc = 0;
 
+#ifdef CONFIG_LEDS_LM3554
+	switch (led_state) {
+
+	case MSM_CAMERA_LED_INIT:
+		lm3554_flashlight_power(1);
+		break;
+
+	case MSM_CAMERA_LED_RELEASE:
+		lm3554_flashlight_power(0);
+		break;
+
+	case MSM_CAMERA_LED_OFF:
+		lm3554_flashlight_control(led_state);
+		break;
+
+	case MSM_CAMERA_LED_LOW:
+		lm3554_flashlight_control(led_state);
+		break;
+
+	case MSM_CAMERA_LED_HIGH:
+		lm3554_flashlight_control(led_state);
+		break;
+
+	default:
+		rc = -EFAULT;
+		break;
+	}
+#else
 	switch (led_state) {
 
 	case MSM_CAMERA_LED_INIT:
@@ -500,6 +533,7 @@ error:
 		rc = -EFAULT;
 		break;
 	}
+#endif /* CONFIG_LEDS_LM3554 */
 	return rc;
 }
 
