@@ -36,6 +36,19 @@ config IMX074
 	depends on MSM_CAMERA
 	---help---
 	SONY 13.5 MP Bayer Sensor
+
+config IMX175
+        bool "Sensor IMX175 (BAYER 8M)"
+        depends on MSM_CAMERA
+        ---help---
+        SONY 8 MP Bayer Sensor
+
+config IMX132
+        bool "Sensor IMX132 (BAYER 2M)"
+        depends on MSM_CAMERA
+        ---help---
+        SONY 2 MP Bayer Sensor
+
 config OV5640
 	bool "Sensor OV5640 (YUV 5M)"
 	depends on MSM_CAMERA && !MSM_CAMERA_V4L2
@@ -136,6 +149,12 @@ config IMX074_ACT
 	---help---
 	Actuator for SONY 13.5 MP Bayer Sensor
 
+config IMX175_ACT
+	bool "Actuator IMX175 (BAYER 8M)"
+	depends on MSM_CAMERA
+	---help---
+	Actuator for SONY 8 MP Bayer Sensor
+
 config S5K3E2FX
 	bool "Sensor s5k3e2fx (Samsung 5M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !MSM_CAMERA_V4L2
@@ -207,6 +226,12 @@ config OV8825
 	  It is a Bayer 8MP sensor with auto focus and it supports
 	  two mipi lanes, required for msm8625 platform.
 	  Say Y here if this is msm8625 variant platform.
+
+config S5K3H7
+	bool "Sensor s5k3h7 (Samsung 8M 4 lanes)"
+	depends on MSM_CAMERA
+	---help---
+	  Samsung 8M with Autofocus
 
 config IMX135
 	bool "Sensor imx135 (Sony 13MP)"
