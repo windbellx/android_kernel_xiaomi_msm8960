@@ -159,6 +159,10 @@ struct lvds_panel_info {
 struct msm_panel_info {
 	__u32 xres;
 	__u32 yres;
+#ifdef CONFIG_MACH_MITWO
+	__u32 width;
+	__u32 height;
+#endif
 	__u32 bpp;
 	__u32 mode2_xres;
 	__u32 mode2_yres;
