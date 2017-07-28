@@ -240,7 +240,9 @@ static int32_t msm_actuator_move_focus(
 {
 	int32_t rc = 0;
 	int8_t sign_dir = move_params->sign_dir;
+#ifndef CONFIG_IMX175
 	uint16_t step_boundary = 0;
+#endif
 	uint16_t target_step_pos = 0;
 	uint16_t target_lens_pos = 0;
 	int16_t dest_step_pos = move_params->dest_step_pos;
@@ -290,12 +292,13 @@ static int32_t msm_actuator_move_focus(
 		a_ctrl->curr_step_pos, dest_step_pos, curr_lens_pos);
 
 	while (a_ctrl->curr_step_pos != dest_step_pos) {
+#ifndef CONFIG_IMX175
 		step_boundary =
 			a_ctrl->region_params[a_ctrl->curr_region_index].
 			step_bound[dir];
 		if ((dest_step_pos * sign_dir) <=
 			(step_boundary * sign_dir)) {
-
+#endif
 			target_step_pos = dest_step_pos;
 			target_lens_pos =
 				a_ctrl->step_position_table[target_step_pos];
@@ -312,7 +315,7 @@ static int32_t msm_actuator_move_focus(
 				return rc;
 			}
 			curr_lens_pos = target_lens_pos;
-
+#ifndef CONFIG_IMX175
 		} else {
 			target_step_pos = step_boundary;
 			target_lens_pos =
@@ -333,6 +336,7 @@ static int32_t msm_actuator_move_focus(
 
 			a_ctrl->curr_region_index += sign_dir;
 		}
+#endif
 		a_ctrl->curr_step_pos = target_step_pos;
 	}
 
