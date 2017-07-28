@@ -1479,6 +1479,13 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 
 	mfd->var_xres = panel_info->xres;
 	mfd->var_yres = panel_info->yres;
+#ifdef CONFIG_MACH_MITWO
+	if (panel_info->height)
+		var->height = panel_info->height;
+	if (panel_info->width)
+		var->width = panel_info->width;
+#endif
+
 	mfd->var_frame_rate = panel_info->frame_rate;
 
 	var->pixclock = mfd->panel_info.clk_rate;
