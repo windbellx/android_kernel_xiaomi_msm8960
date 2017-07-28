@@ -99,6 +99,9 @@ struct msm_sensor_reg_t {
 	struct msm_camera_i2c_conf_array *mode_settings;
 	struct msm_camera_i2c_conf_array *no_effect_settings;
 	struct msm_sensor_output_info_t *output_settings;
+#ifdef CONFIG_MACH_MITWO
+	struct sensor_calib_data sensor_wb_calib;
+#endif
 	uint8_t num_conf;
 };
 
@@ -136,8 +139,16 @@ struct msm_sensor_fn_t {
 			struct fps_cfg *);
 	int32_t (*sensor_write_exp_gain) (struct msm_sensor_ctrl_t *,
 			uint16_t, uint32_t, int32_t, uint16_t);
+#ifdef CONFIG_MACH_MITWO
+	int32_t (*sensor_write_exp_gain_hdr) (struct msm_sensor_ctrl_t *,
+			uint16_t, uint32_t, int32_t, uint16_t);
+#endif
 	int32_t (*sensor_write_snapshot_exp_gain) (struct msm_sensor_ctrl_t *,
 			uint16_t, uint32_t, int32_t, uint16_t);
+#ifdef CONFIG_MACH_MITWO
+	int32_t (*sensor_write_snapshot_exp_gain_hdr) (struct msm_sensor_ctrl_t *,
+			uint16_t, uint32_t, int32_t, uint16_t);
+#endif
 	int32_t (*sensor_setting) (struct msm_sensor_ctrl_t *,
 			int update_type, int rt);
 	int32_t (*sensor_csi_setting) (struct msm_sensor_ctrl_t *,
@@ -153,6 +164,10 @@ struct msm_sensor_fn_t {
 		(struct msm_sensor_ctrl_t *);
 	int (*sensor_power_up) (struct msm_sensor_ctrl_t *);
 	int32_t (*sensor_match_id)(struct msm_sensor_ctrl_t *s_ctrl);
+	#ifdef CONFIG_MACH_MITWO
+	int32_t (*sensor_write_init_settings)(struct msm_sensor_ctrl_t *s_ctrl);
+	int32_t (*sensor_write_res_settings)(struct msm_sensor_ctrl_t *s_ctrl, uint16_t res);
+	#endif
 	void (*sensor_adjust_frame_lines) (struct msm_sensor_ctrl_t *s_ctrl);
 	int32_t (*sensor_get_csi_params)(struct msm_sensor_ctrl_t *,
 		struct csi_lane_params_t *);
