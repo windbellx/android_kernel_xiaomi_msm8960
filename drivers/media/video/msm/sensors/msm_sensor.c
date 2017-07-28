@@ -291,9 +291,21 @@ int32_t msm_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 	int32_t rc = 0;
 	if (update_type == MSM_SENSOR_REG_INIT) {
 		s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
-		msm_sensor_write_init_settings(s_ctrl);
+#ifdef CONFIG_MACH_MITWO
+		if (s_ctrl->func_tbl->sensor_write_init_settings)
+			s_ctrl->func_tbl->sensor_write_init_settings(s_ctrl);
+		else
+#endif
+			msm_sensor_write_init_settings(s_ctrl);
 	} else if (update_type == MSM_SENSOR_UPDATE_PERIODIC) {
-		msm_sensor_write_res_settings(s_ctrl, res);
+#ifdef CONFIG_MACH_MITWO
+		pr_info("%s res:%d", __func__, res);
+
+		if (s_ctrl->func_tbl->sensor_write_res_settings)
+			s_ctrl->func_tbl->sensor_write_res_settings(s_ctrl, res);
+		else
+#endif
+			msm_sensor_write_res_settings(s_ctrl, res);
 		v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
 			NOTIFY_PCLK_CHANGE, &s_ctrl->msm_sensor_reg->
 			output_settings[res].op_pixel_clk);
@@ -305,6 +317,14 @@ int32_t msm_sensor_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl,
 	int mode, int res)
 {
 	int32_t rc = 0;
+
+#ifdef CONFIG_MACH_MITWO
+	pr_info("%s res:%d cur:%d mode:%d", __func__, res, s_ctrl->curr_res, mode);
+	/* Switching between fullsize preview and snapshot */
+	if (((s_ctrl->curr_res == 0) && (res == 1)) || ((s_ctrl->curr_res == 1) && (res == 0)))
+		return rc;
+#endif
+
 	if (s_ctrl->curr_res != res) {
 		s_ctrl->curr_frame_length_lines =
 			s_ctrl->msm_sensor_reg->
@@ -357,6 +377,11 @@ int32_t msm_sensor_get_output_info(struct msm_sensor_ctrl_t *s_ctrl,
 {
 	int rc = 0;
 	sensor_output_info->num_info = s_ctrl->msm_sensor_reg->num_conf;
+#ifdef CONFIG_MACH_MITWO
+	sensor_output_info->wb_calib.r_over_g = s_ctrl->msm_sensor_reg->sensor_wb_calib.r_over_g;
+	sensor_output_info->wb_calib.b_over_g = s_ctrl->msm_sensor_reg->sensor_wb_calib.b_over_g;
+	sensor_output_info->wb_calib.gr_over_gb = s_ctrl->msm_sensor_reg->sensor_wb_calib.gr_over_gb;
+#endif
 	if (copy_to_user((void *)sensor_output_info->output_info,
 		s_ctrl->msm_sensor_reg->output_settings,
 		sizeof(struct msm_sensor_output_info_t) *
@@ -451,14 +476,41 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				rc = -EFAULT;
 				break;
 			}
-			rc =
-				s_ctrl->func_tbl->
-				sensor_write_exp_gain(
-					s_ctrl,
-					cdata.cfg.exp_gain.gain,
-					cdata.cfg.exp_gain.line,
-					cdata.cfg.exp_gain.luma_avg,
-					cdata.cfg.exp_gain.fgain);
+#ifdef CONFIG_MACH_MITWO
+			if (s_ctrl->func_tbl->
+				sensor_write_exp_gain_hdr == NULL) {
+#endif
+				rc =
+					s_ctrl->func_tbl->
+					sensor_write_exp_gain(
+						s_ctrl,
+						cdata.cfg.exp_gain.gain,
+						cdata.cfg.exp_gain.line,
+						cdata.cfg.exp_gain.luma_avg,
+						cdata.cfg.exp_gain.fgain);
+#ifdef CONFIG_MACH_MITWO
+			} else {
+				if (s_ctrl->curr_res == 2) {
+					rc =
+						s_ctrl->func_tbl->
+						sensor_write_exp_gain_hdr(
+								s_ctrl,
+								cdata.cfg.exp_gain.gain,
+								cdata.cfg.exp_gain.line,
+								cdata.cfg.exp_gain.luma_avg,
+								cdata.cfg.exp_gain.fgain);
+				} else {
+					rc = s_ctrl->func_tbl->
+						sensor_write_exp_gain(
+								s_ctrl,
+								cdata.cfg.exp_gain.gain,
+								cdata.cfg.exp_gain.line);
+
+				}
+				s_ctrl->prev_gain = cdata.cfg.exp_gain.gain;
+				s_ctrl->prev_line = cdata.cfg.exp_gain.line;
+			}
+#endif
 			break;
 
 		case CFG_SET_PICT_EXP_GAIN:
@@ -470,6 +522,9 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				rc = -EFAULT;
 				break;
 			}
+#ifdef CONFIG_MACH_MITWO
+			if (s_ctrl->func_tbl-> sensor_write_snapshot_exp_gain_hdr == NULL) {
+#endif
 			rc =
 				s_ctrl->func_tbl->
 				sensor_write_snapshot_exp_gain(
@@ -478,6 +533,25 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 					cdata.cfg.exp_gain.line,
 					cdata.cfg.exp_gain.luma_avg,
 					cdata.cfg.exp_gain.fgain);
+#ifdef CONFIG_MACH_MITWO
+			} else {
+				if (s_ctrl->curr_res == 2) {
+					rc = s_ctrl->func_tbl->
+						sensor_write_snapshot_exp_gain_hdr(
+							s_ctrl,
+							cdata.cfg.exp_gain.gain,
+							cdata.cfg.exp_gain.line,
+							cdata.cfg.exp_gain.luma_avg,
+							cdata.cfg.exp_gain.fgain);
+				} else {
+					rc = s_ctrl->func_tbl->
+						sensor_write_snapshot_exp_gain(
+								s_ctrl,
+								cdata.cfg.exp_gain.gain,
+								cdata.cfg.exp_gain.line);
+				}
+			}
+#endif
 			break;
 
 		case CFG_SET_MODE:
