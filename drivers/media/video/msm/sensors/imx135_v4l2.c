@@ -40,7 +40,7 @@ DEFINE_MUTEX(imx135_mut);
 #define DBG_SEL                     0x4476
 #define LSC_TABLE_LEN_BYTES			504
 #define IMX135_TC_SWITCH_ENABLE 0
-static uint16_t luma_delta_hys;
+static uint16_t luma_delta_hys = 0;
 
 static struct msm_sensor_ctrl_t imx135_s_ctrl;
 
@@ -1350,7 +1350,7 @@ static struct v4l2_subdev_ops imx135_subdev_ops = {
 	.video  = &imx135_subdev_video_ops,
 };
 
-static uint16_t otp_readed;
+static uint16_t otp_readed = 0;
 static uint16_t r_over_g, b_over_g, b_over_r;
 static int32_t imx135_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 {
