@@ -18,7 +18,7 @@
 
 DEFINE_MUTEX(imx132_mut);
 static struct msm_sensor_ctrl_t imx132_s_ctrl;
-static int vendor;
+static int vendor = 0;
 
 static struct msm_camera_i2c_reg_conf imx132_start_settings[] = {
 	{0x0100, 0x01},
