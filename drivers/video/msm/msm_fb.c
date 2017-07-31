@@ -422,16 +422,42 @@ void mdp_restore_rgb(void)
 	mdp4_pcc_cfg(&pcc_cfg);
 }
 
+#ifdef CONFIG_MACH_MITWO
+static ssize_t msm_fb_set_dispparam(struct device *dev,
+				  struct device_attribute *attr, const char *buf, size_t size)
+{
+	int param;
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct msm_fb_panel_data *pdata =
+		(struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+
+	sscanf(buf, "%u", &param);
+
+	if (!mfd->panel_power_on)
+		return size;
+
+	pdata->set_dispparam(param);
+	return size;
+}
+#endif
+
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, msm_fb_msm_fb_type, NULL);
 static DEVICE_ATTR(msm_fb_fps_level, S_IRUGO | S_IWUSR | S_IWGRP, NULL, \
 				msm_fb_fps_level_change);
 static DEVICE_ATTR(rgb, S_IRUGO | S_IWUSR | S_IWGRP, mdp_get_rgb, \
                                 mdp_set_rgb);
+#ifdef CONFIG_MACH_MITWO
+static DEVICE_ATTR(msm_fb_dispparam, 0644, NULL, msm_fb_set_dispparam);
+#endif
 
 static struct attribute *msm_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_fps_level.attr,
 	&dev_attr_rgb.attr,
+#ifdef CONFIG_MACH_MITWO
+	&dev_attr_msm_fb_dispparam.attr,
+#endif
 	NULL,
 };
 static struct attribute_group msm_fb_attr_group = {
@@ -4020,6 +4046,23 @@ static int msmfb_get_metadata(struct msm_fb_data_type *mfd,
 	return ret;
 }
 
+#ifdef CONFIG_MACH_MITWO
+static int msmfb_disp_param_set(struct fb_info *info, void __user *p)
+{
+	int param;
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	struct msm_fb_panel_data *pdata;
+
+	if (copy_from_user(&param, p, sizeof(param)))
+		return -EFAULT;
+
+	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+	pdata->set_dispparam(param);
+
+	return 0;
+}
+#endif
+
 static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
@@ -4355,6 +4398,14 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 				sizeof(mdp_metadata));
 
 		break;
+
+#ifdef CONFIG_MACH_MITWO
+	case MSMFB_DISP_PARAM_CTRL:
+		down(&msm_fb_ioctl_ppp_sem);
+		ret = msmfb_disp_param_set(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
+		break;
+#endif
 
 	default:
 		MSM_FB_INFO("MDP: unknown ioctl (cmd=%x) received!\n", cmd);
