@@ -4072,6 +4072,7 @@ static void __init apq8064_i2c_init(void)
 				PLATFORM_SUBTYPE_SGLTE2) {
 		apq8064_device_qup_i2c_gsbi4.dev.platform_data =
 					&apq8064_i2c_qup_gsbi4_pdata;
+	}
 
 #ifdef CONFIG_MACH_MITWO
 	ifclk = clk_get_sys("msm_serial_hs.2", "iface_clk");
@@ -4089,6 +4090,7 @@ static void __init apq8064_i2c_init(void)
 	}
 	mpq8064_i2c_qup_gsbi5_pdata.use_gsbi_shared_mode = 1;
 #endif
+
 	mpq8064_device_qup_i2c_gsbi5.dev.platform_data =
 					&mpq8064_i2c_qup_gsbi5_pdata;
 }

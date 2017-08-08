@@ -608,6 +608,7 @@ static const struct snd_soc_dapm_route apq8064_common_audio_map[] = {
 #else
 	{"AMIC2", NULL, "MIC BIAS2 External"},
 	{"MIC BIAS2 External", NULL, "Headset Mic"},
+#endif
 
 #ifndef CONFIG_SND_SOC_DUAL_AMIC
 	/* Headset ANC microphones */
