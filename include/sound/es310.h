@@ -2,32 +2,55 @@
 #define __LINUX_es310_H
 /*-----------------API ---------------------*/
 
+/* RE-DOWNLOAD FIRMWARE  */
 #define A200_msg_BootloadInitiate 0x80030000
 
+
+/* AFTER POWER UP OR SYSYTEM RESET*/
 #define ES310_msg_BOOT		0x0001
 #define ES310_msg_BOOT_ACK	0x01
 
+/* sync */
 #define A200_msg_Sync_Polling 0x80000000
-#define SYNC_WAIT_TIME_BEFORE 10
+#define SYNC_WAIT_TIME_BEFORE 10 // ms
+/* S/W reset */
 #define A200_msg_Reset 0x8002
 #define RESET_IMMEDIATE 0x0000
 #define RESET_DELAYED 0x0001
 
-#define A200_msg_Wakeup
-#define WAKEUP_WAITTIME_AFTER 30
 
+/*wake up */
+#define A200_msg_Wakeup
+#define WAKEUP_WAITTIME_AFTER 30 // ms
+
+/* get/set device id and parameter 
+* set :
+1. es310_msg(SetDeviceParmID, Parameter ID)
+   Parameter ID : 8 bit device + 8 bit device parameter
+2. read 4 byte ack.
+3. es310_msg(SetDeviceParm, value)
+4. read 4 byte ack.
+* get:
+1. es310_msg(GetDeviceParm, Parameter ID)
+   Parameter ID : 8 bit device + 8 bit device parameter
+
+*/
 #define A200_msg_GetDeviceParm		0x800B
 #define A200_msg_SetDeviceParmID	0x800C
 #define A200_msg_SetDeviceParm		0x800D
 
+/* power state */
 #define A200_msg_SetPowerState_Sleep 0x80100001
-#define STOP_CLOCK_WAITTIME_AFTER 120
+#define STOP_CLOCK_WAITTIME_AFTER 120 // ms
 
+
+/* ------------- general definitions -------------*/
 #define ES310_I2C_NAME "audience_es310"
 #define ES310_I2S_SLAVE_ADDRESS (0x3E)
-#define POLLING_TIMEOUT 20
-#define RESET_TIMEOUT 50
+#define POLLING_TIMEOUT 20 // ms
+#define RESET_TIMEOUT 50 // ms
 
+// unconfirmed
 #define ES310_MAX_FW_SIZE	(32*4096)
 
 #define TIMEOUT			20 /* ms */
@@ -37,7 +60,11 @@
 #define ES310_SLEEP		0
 #define ES310_ACTIVE		1
 #define ES310_CMD_FIFO_DEPTH	32 /* 128 / 4 = 32 */
+
+#ifdef ERROR
+#undef ERROR
 #define ERROR			0xffffffff
+#endif
 
 /* ---------------------Stucture -------------------*/
 
@@ -61,28 +88,28 @@ enum ES310_config_mode {
 };
 
 #define PRESET_BASE 0x80310000
-#define ES310_PRESET_HANDSET_INCALL_NB		(PRESET_BASE)
-#define ES310_PRESET_HEADSET_INCALL_NB		(PRESET_BASE + 1)
-#define ES310_PRESET_HANDSFREE_REC_NB		(PRESET_BASE + 2)
-#define ES310_PRESET_HANDSFREE_INCALL_NB	(PRESET_BASE + 3)
-#define ES310_PRESET_HANDSET_INCALL_WB		(PRESET_BASE + 4)
-#define ES310_PRESET_HEADSET_INCALL_WB		(PRESET_BASE + 5)
-#define ES310_PRESET_AUDIOPATH_DISABLE		(PRESET_BASE + 6)
-#define ES310_PRESET_HANDSFREE_INCALL_WB	(PRESET_BASE + 7)
-#define ES310_PRESET_HANDSET_VOIP_WB		(PRESET_BASE + 8)
-#define ES310_PRESET_HEADSET_VOIP_WB		(PRESET_BASE + 9)
-#define ES310_PRESET_HANDSFREE_REC_WB		(PRESET_BASE + 10)
-#define ES310_PRESET_HANDSFREE_VOIP_WB		(PRESET_BASE + 11)
-#define ES310_PRESET_VOICE_RECOGNIZTION_WB	(PRESET_BASE + 12)
-#define ES310_PRESET_HEADSET_REC_WB		(PRESET_BASE + 13)
+#define ES310_PRESET_HANDSET_INCALL_NB		    (PRESET_BASE)
+#define ES310_PRESET_HEADSET_INCALL_NB 	           (PRESET_BASE + 1)
+#define ES310_PRESET_HANDSFREE_REC_NB		    (PRESET_BASE + 2)
+#define ES310_PRESET_HANDSFREE_INCALL_NB		    (PRESET_BASE + 3)
+#define ES310_PRESET_HANDSET_INCALL_WB	           (PRESET_BASE + 4)
+#define ES310_PRESET_HEADSET_INCALL_WB		    (PRESET_BASE + 5)
+#define ES310_PRESET_AUDIOPATH_DISABLE               (PRESET_BASE + 6)
+#define ES310_PRESET_HANDSFREE_INCALL_WB	    (PRESET_BASE + 7)
+#define ES310_PRESET_HANDSET_VOIP_WB		           (PRESET_BASE + 8)
+#define ES310_PRESET_HEADSET_VOIP_WB                   (PRESET_BASE + 9)
+#define ES310_PRESET_HANDSFREE_REC_WB                 (PRESET_BASE + 10)
+#define ES310_PRESET_HANDSFREE_VOIP_WB               (PRESET_BASE + 11)
+#define ES310_PRESET_VOICE_RECOGNIZTION_WB       (PRESET_BASE + 12)
+#define ES310_PRESET_HEADSET_REC_WB                     (PRESET_BASE + 13)
 
 enum ES310_PathID {
-	ES310_PATH_SUSPEND = 0,
-	ES310_PATH_HANDSET,
-	ES310_PATH_HEADSET,
-	ES310_PATH_HANDSFREE,
-	ES310_PATH_BACKMIC,
-	ES310_PATH_MAX
+        ES310_PATH_SUSPEND = 0,
+        ES310_PATH_HANDSET,
+        ES310_PATH_HEADSET,
+        ES310_PATH_HANDSFREE,
+        ES310_PATH_BACKMIC,
+        ES310_PATH_MAX
 };
 
 enum MIC_SWITCH_CONF {
@@ -92,11 +119,11 @@ enum MIC_SWITCH_CONF {
 };
 
 enum ES310_NS_states {
-	ES310_NS_STATE_AUTO,
-	ES310_NS_STATE_OFF,
-	ES310_NS_STATE_CT,
-	ES310_NS_STATE_FT,
-	ES310_NS_NUM_STATES
+ ES310_NS_STATE_AUTO,
+ ES310_NS_STATE_OFF,
+ ES310_NS_STATE_CT,
+ ES310_NS_STATE_FT,
+ ES310_NS_NUM_STATES
 };
 
 struct es310img {

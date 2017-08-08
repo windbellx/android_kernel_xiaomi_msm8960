@@ -1461,8 +1461,6 @@ static struct dsi_cmd_desc renesas_cmd_on_cmds[] = {
 };
 
 #ifdef CONFIG_MACH_MITWO
-extern struct dcs_cmd_req cmdreq;
-
 static char config_mca[2] = {0xB0, 0x04};
 static char config_seqctrl[2] = {0xD6, 0x01};
 static char config_fmis1_cmd[7] = {0xB3, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00};
@@ -1696,6 +1694,7 @@ static void mipi_renesas_manufature_cb0(u32 data)
 
 static uint32 mipi_renesas_manufacture_id(struct msm_fb_data_type *mfd)
 {
+	struct dcs_cmd_req cmdreq;
 	cmdreq.cmds = &renesas_manufacture_id_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
@@ -1708,6 +1707,7 @@ static uint32 mipi_renesas_manufacture_id(struct msm_fb_data_type *mfd)
 
 static uint32 mipi_renesas_manufacture_id0(struct msm_fb_data_type *mfd)
 {
+	struct dcs_cmd_req cmdreq;
 	cmdreq.cmds = &renesas_manufacture_id0_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
@@ -1725,6 +1725,7 @@ void sub_mipi_lgd_renesas_set_dispparam(int param);
 
 static int mipi_lgd_renesas_lcd_on(struct platform_device *pdev)
 {
+	struct dcs_cmd_req cmdreq;
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;
 	static int blon;
@@ -1961,6 +1962,7 @@ static int mipi_renesas_lcd_off(struct platform_device *pdev)
 #ifdef CONFIG_MACH_MITWO
 static int mipi_renesas_hitachi_on(struct platform_device *pdev)
 {
+	struct dcs_cmd_req cmdreq;
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;
 	static int blon;
@@ -2007,6 +2009,7 @@ static int mipi_renesas_hitachi_on(struct platform_device *pdev)
 
 static int mipi_renesas_hitachi_off(struct platform_device *pdev)
 {
+	struct dcs_cmd_req cmdreq;
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;
 
