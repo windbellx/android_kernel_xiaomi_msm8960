@@ -443,7 +443,6 @@ static struct msm_sensor_ctrl_t imx132_s_ctrl = {
 	.sensor_id_info = &imx132_id_info,
 	.sensor_exp_gain_info = &imx132_exp_gain_info,
 	.cam_mode = MSM_SENSOR_MODE_INVALID,
-	.csi_params = &imx132_csi_params_array[0],
 	.msm_sensor_mutex = &imx132_mut,
 	.sensor_i2c_driver = &imx132_i2c_driver,
 	.sensor_v4l2_subdev_info = imx132_subdev_info,

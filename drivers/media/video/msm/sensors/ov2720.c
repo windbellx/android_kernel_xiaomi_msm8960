@@ -1366,7 +1366,7 @@ static int32_t ov2720_write_res_settings(struct msm_sensor_ctrl_t *s_ctrl, uint1
 		return rc;
 
 	if (s_ctrl->func_tbl->sensor_adjust_frame_lines)
-		rc = s_ctrl->func_tbl->sensor_adjust_frame_lines(s_ctrl, res);
+		s_ctrl->func_tbl->sensor_adjust_frame_lines(s_ctrl);
 
 	return rc;
 }
@@ -1456,7 +1456,6 @@ static struct msm_sensor_ctrl_t ov2720_s_ctrl = {
 	.sensor_id_info = &ov2720_id_info,
 	.sensor_exp_gain_info = &ov2720_exp_gain_info,
 	.cam_mode = MSM_SENSOR_MODE_INVALID,
-	.csi_params = &ov2720_csi_params_array[0],
 	.msm_sensor_mutex = &ov2720_mut,
 	.sensor_i2c_driver = &ov2720_i2c_driver,
 	.sensor_v4l2_subdev_info = ov2720_subdev_info,
