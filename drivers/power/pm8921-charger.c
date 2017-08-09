@@ -1258,7 +1258,7 @@ static int64_t read_battery_id(struct pm8921_chg_chip *chip)
 	}
 	pr_debug("batt_id phy = %lld meas = 0x%llx\n", result.physical,
 						result.measurement);
-	return result.physical;
+	return result.adc_code;
 }
 
 static int is_battery_valid(struct pm8921_chg_chip *chip)
