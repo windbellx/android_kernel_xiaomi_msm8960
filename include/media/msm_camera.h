@@ -1325,6 +1325,9 @@ struct msm_sensor_output_info_t {
 struct sensor_output_info_t {
 	struct msm_sensor_output_info_t *output_info;
 	uint16_t num_info;
+#ifdef CONFIG_MACH_MITWO
+	struct sensor_calib_data wb_calib;
+#endif
 };
 
 struct msm_sensor_exp_gain_info_t {

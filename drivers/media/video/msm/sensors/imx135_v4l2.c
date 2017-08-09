@@ -1936,7 +1936,6 @@ static struct msm_sensor_ctrl_t imx135_s_ctrl = {
 	.sensor_id_info = &imx135_id_info,
 	.sensor_exp_gain_info = &imx135_exp_gain_info,
 	.cam_mode = MSM_SENSOR_MODE_INVALID,
-	.csi_params = &imx135_csi_params_array[0],
 	.msm_sensor_mutex = &imx135_mut,
 	.sensor_i2c_driver = &imx135_i2c_driver,
 	.sensor_v4l2_subdev_info = imx135_subdev_info,
