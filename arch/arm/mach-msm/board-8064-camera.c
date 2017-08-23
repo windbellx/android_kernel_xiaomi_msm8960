@@ -550,20 +550,6 @@ static struct camera_vreg_t apq_8064_cam_vreg[] = {
 	{"cam_vaf", REG_LDO, 2800000, 2850000, 300000},
 };
 
-static struct camera_vreg_t apq_8064_back_cam_vreg[] = {
-#ifdef CONFIG_MACH_MITWO
-	{"cam_vio", REG_VS, 0, 0, 0},
-	{"cam_vana", REG_LDO, 2800000, 2850000, 85600},
-	{"cam_vaf", REG_LDO, 2800000, 2800000, 300000},
-	{"cam_vdig", REG_LDO, 1200000, 1200000, 105000},
-#else
-	{"cam_vdig", REG_LDO, 1200000, 1200000, 105000},
-	{"cam_vio", REG_VS, 0, 0, 0},
-	{"cam_vana", REG_LDO, 2800000, 2850000, 85600},
-	{"cam_vaf", REG_LDO, 2800000, 2850000, 300000},
-#endif
-};
-
 #ifdef CONFIG_MACH_MITWO
 static struct camera_vreg_t apq_8064_imx135_cam_vreg[] = {
 	{"cam_vio", REG_VS, 0, 0, 0},
@@ -756,8 +742,8 @@ static struct msm_camera_csi_lane_params imx175_csi_lane_params = {
 
 static struct msm_camera_sensor_platform_info sensor_board_info_imx175 = {
 	.mount_angle = 90,
-	.cam_vreg = apq_8064_back_cam_vreg,
-	.num_vreg = ARRAY_SIZE(apq_8064_back_cam_vreg),
+	.cam_vreg = apq_8064_cam_vreg,
+	.num_vreg = ARRAY_SIZE(apq_8064_cam_vreg),
 	.gpio_conf = &apq8064_back_cam_gpio_conf,
 	.i2c_conf = &apq8064_back_cam_i2c_conf,
 	.csi_lane_params = &imx175_csi_lane_params,
@@ -789,8 +775,8 @@ static struct msm_camera_csi_lane_params s5k3h7_csi_lane_params = {
 
 static struct msm_camera_sensor_platform_info sensor_board_info_s5k3h7 = {
 	.mount_angle = 90,
-	.cam_vreg = apq_8064_back_cam_vreg,
-	.num_vreg = ARRAY_SIZE(apq_8064_back_cam_vreg),
+	.cam_vreg = apq_8064_cam_vreg,
+	.num_vreg = ARRAY_SIZE(apq_8064_cam_vreg),
 	.gpio_conf = &apq8064_back_cam_gpio_conf,
 	.i2c_conf = &apq8064_back_cam_i2c_conf,
 	.csi_lane_params = &s5k3h7_csi_lane_params,
