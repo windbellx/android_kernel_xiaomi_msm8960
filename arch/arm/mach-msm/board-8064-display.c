@@ -61,6 +61,10 @@ static struct resource msm_fb_resources[] = {
 #define LVDS_FRC_PANEL_NAME "lvds_frc_fhd"
 #define MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME "mipi_video_toshiba_wsvga"
 #define MIPI_VIDEO_CHIMEI_WXGA_PANEL_NAME "mipi_video_chimei_wxga"
+#ifdef CONFIG_MACH_MITWO
+#define MIPI_CMD_HITACHI_720P_PANEL_NAME "mipi_cmd_hitachi_720p"
+#define MIPI_VIDEO_SHARP_720P_PANEL_NAME "mipi_video_sharp_720p"
+#endif
 #define HDMI_PANEL_NAME "hdmi_msm"
 #define MHL_PANEL_NAME "hdmi_msm,mhl_8334"
 #define TVOUT_PANEL_NAME "tvout_msm"
@@ -106,14 +110,27 @@ static int msm_fb_detect_panel(const char *name)
 				return 0;
 		}
 	} else if (machine_is_apq8064_mtp()) {
+#ifdef CONFIG_MACH_MITWO
+		if (!strncmp(name, MIPI_CMD_HITACHI_720P_PANEL_NAME,
+				strnlen(MIPI_CMD_HITACHI_720P_PANEL_NAME,
+					PANEL_NAME_MAX_LEN)))
+#else
 		if (!strncmp(name, MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 			strnlen(MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
-				PANEL_NAME_MAX_LEN)))
+					PANEL_NAME_MAX_LEN)))
+#endif
 			return 0;
+#ifdef CONFIG_MACH_MITWO
+	} else if (machine_is_mitwo()) {
+		if (!strncmp(name, MIPI_CMD_HITACHI_720P_PANEL_NAME,
+					strnlen(MIPI_CMD_HITACHI_720P_PANEL_NAME,
+						PANEL_NAME_MAX_LEN)))
+			return 0;
+#endif
 	} else if (machine_is_apq8064_cdp()) {
 		if (!strncmp(name, LVDS_CHIMEI_PANEL_NAME,
-			strnlen(LVDS_CHIMEI_PANEL_NAME,
-				PANEL_NAME_MAX_LEN)))
+					strnlen(LVDS_CHIMEI_PANEL_NAME,
+						PANEL_NAME_MAX_LEN)))
 			return 0;
 	} else if (machine_is_mpq8064_dtv()) {
 		if (!strncmp(name, LVDS_FRC_PANEL_NAME,
@@ -309,6 +326,11 @@ static struct msm_hdmi_platform_data hdmi_msm_data = {
 	.cec_power = hdmi_cec_power,
 	.panel_power = hdmi_panel_power,
 	.gpio_config = hdmi_gpio_config,
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_FB_MSM_HDMI_MHL)
+	.is_mhl_enabled = true,
+#endif
+#endif
 };
 
 static struct platform_device hdmi_msm_device = {
@@ -519,6 +541,164 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.dsi_power_save = mipi_dsi_panel_power,
 };
 
+#ifdef CONFIG_MACH_MITWO
+#define MI_RESET_GPIO		PM8921_GPIO_PM_TO_SYS(25)
+#define MI_LCD_ID_GPIO		PM8921_GPIO_PM_TO_SYS(12)
+
+static bool dsi_mi_power_on;
+static int mi_panel_id = 0xF;
+
+int mipanel_id(void)
+{
+	return mi_panel_id;
+}
+
+void mipanel_set_id(int id)
+{
+	mi_panel_id = id;
+}
+
+static int mipi_dsi_mipanel_power(int on)
+{
+	static struct regulator *reg_l23, *reg_l2, *reg_lvs7, *reg_vsp;
+	static int reset_gpio, lcd_id_gpio;
+	int rc;
+
+	if (!dsi_mi_power_on) {
+		reg_lvs7 = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi1_vddio");
+		if (IS_ERR_OR_NULL(reg_lvs7)) {
+			pr_err("could not get 8921_lvs7, rc = %ld\n",
+					PTR_ERR(reg_lvs7));
+			return -ENODEV;
+		}
+
+		reg_l2 = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi1_pll_vdda");
+		if (IS_ERR_OR_NULL(reg_l2)) {
+			pr_err("could not get 8921_l2, rc = %ld\n",
+					PTR_ERR(reg_l2));
+			return -ENODEV;
+		}
+
+		rc = regulator_set_voltage(reg_l2, 1200000, 1200000);
+		if (rc) {
+			pr_err("set_voltage l2 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+
+		reg_l23 = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi_mi_vddio");
+		if (IS_ERR_OR_NULL(reg_l23)) {
+			pr_err("could not get 8921_l23, rc = %ld\n",
+				PTR_ERR(reg_l23));
+			return -ENODEV;
+		}
+
+		rc = regulator_set_voltage(reg_l23, 1800000, 1800000);
+		if (rc) {
+			pr_err("set_voltage l23 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+
+		reg_vsp = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi_mi_vsp");
+		if (IS_ERR_OR_NULL(reg_vsp)) {
+			pr_err("could not get VSP/VSN regulator, rc = %ld\n",
+				PTR_ERR(reg_vsp));
+			return -ENODEV;
+		}
+
+		reset_gpio = MI_RESET_GPIO;
+		rc = gpio_request(reset_gpio, "disp_rst_n");
+		if (rc) {
+			pr_err("request pm8921 gpio 25 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		lcd_id_gpio = MI_LCD_ID_GPIO;
+		rc = gpio_request(lcd_id_gpio, "disp_id_det");
+		if (rc) {
+			pr_err("request pm8921 gpio 12 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		dsi_mi_power_on = true;
+	}
+
+	if (on) {
+		rc = regulator_set_optimum_mode(reg_l2, 100000);
+		if (rc < 0) {
+			pr_err("set_optimum_mode l2 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+
+		rc = regulator_enable(reg_l2);
+		if (rc) {
+			pr_err("enable l2 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_enable(reg_lvs7);
+		if (rc) {
+			pr_err("enable lvs7 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		rc = regulator_enable(reg_l23);
+		if (rc) {
+			pr_err("enable l23 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		mdelay(1);
+
+		rc = regulator_enable(reg_vsp);
+		if (rc) {
+			pr_err("enable vsp failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		mdelay(10);
+
+		gpio_direction_output(reset_gpio, 1);
+		mdelay(3);
+
+		mi_panel_id = gpio_get_value(lcd_id_gpio);
+	} else {
+		gpio_direction_output(reset_gpio, 0);
+
+		rc = regulator_disable(reg_vsp);
+		if (rc) {
+			pr_err("disable reg_vsp failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		mdelay(10);
+
+		rc = regulator_disable(reg_lvs7);
+		if (rc) {
+			pr_err("disable reg_lvs7 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_disable(reg_l23);
+		if (rc) {
+			pr_err("disable reg_l23 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_disable(reg_l2);
+		if (rc) {
+			pr_err("disable reg_l2 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+	}
+
+	return 0;
+}
+
+static struct mipi_dsi_platform_data mipi_dsi_mi_pdata = {
+	.dsi_power_save = mipi_dsi_mipanel_power,
+};
+#endif
+
 static bool lvds_power_on;
 static int lvds_panel_power(int on)
 {
@@ -716,9 +896,16 @@ static struct platform_device mipi_dsi_toshiba_panel_device = {
 	.name = "mipi_toshiba",
 	.id = 0,
 	.dev = {
-			.platform_data = &toshiba_pdata,
+		.platform_data = &toshiba_pdata,
 	}
 };
+
+#ifdef CONFIG_MACH_MITWO
+static struct platform_device mipi_dsi_hitachi_panel_device = {
+	.name = "mipi_renesas",
+	.id = 0,
+};
+#endif
 
 static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 	{
@@ -781,6 +968,12 @@ static int hdmi_enable_5v(int on)
 
 	if (on == prev_on)
 		return 0;
+
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_FB_MSM_HDMI_MHL)
+	return 0;
+#endif
+#endif
 
 	if (!reg_8921_hdmi_mvs) {
 		reg_8921_hdmi_mvs = regulator_get(&hdmi_msm_device.dev,
@@ -1013,26 +1206,43 @@ error:
 
 void __init apq8064_init_fb(void)
 {
-	platform_device_register(&msm_fb_device);
-	platform_device_register(&lvds_chimei_panel_device);
+#ifdef CONFIG_MACH_MITWO
+	if (machine_is_apq8064_mtp() || machine_is_mitwo()) {	/* Mobile devices */
+		platform_device_register(&msm_fb_device);
+#ifdef CONFIG_FB_MSM_WRITEBACK_MSM_PANEL
+		platform_device_register(&wfd_panel_device);
+		platform_device_register(&wfd_device);
+#endif
+		platform_device_register(&mipi_dsi_hitachi_panel_device);
+		msm_fb_register_device("mdp", &mdp_pdata);
+		msm_fb_register_device("mipi_dsi", &mipi_dsi_mi_pdata);
+		platform_device_register(&hdmi_msm_device);
+		msm_fb_register_device("dtv", &dtv_pdata);
+	} else {
+#endif
+		platform_device_register(&msm_fb_device);
+		platform_device_register(&lvds_chimei_panel_device);
 
 #ifdef CONFIG_FB_MSM_WRITEBACK_MSM_PANEL
-	platform_device_register(&wfd_panel_device);
-	platform_device_register(&wfd_device);
+		platform_device_register(&wfd_panel_device);
+		platform_device_register(&wfd_device);
 #endif
 
-	if (machine_is_apq8064_liquid())
-		platform_device_register(&mipi_dsi2lvds_bridge_device);
-	if (machine_is_apq8064_mtp())
-		platform_device_register(&mipi_dsi_toshiba_panel_device);
-	if (machine_is_mpq8064_dtv())
-		platform_device_register(&lvds_frc_panel_device);
+		if (machine_is_apq8064_liquid())
+			platform_device_register(&mipi_dsi2lvds_bridge_device);
+		if (machine_is_apq8064_mtp())
+			platform_device_register(&mipi_dsi_toshiba_panel_device);
+		if (machine_is_mpq8064_dtv())
+			platform_device_register(&lvds_frc_panel_device);
 
-	msm_fb_register_device("mdp", &mdp_pdata);
-	msm_fb_register_device("lvds", &lvds_pdata);
-	msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
-	platform_device_register(&hdmi_msm_device);
-	msm_fb_register_device("dtv", &dtv_pdata);
+		msm_fb_register_device("mdp", &mdp_pdata);
+		msm_fb_register_device("lvds", &lvds_pdata);
+		msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
+		platform_device_register(&hdmi_msm_device);
+		msm_fb_register_device("dtv", &dtv_pdata);
+#ifdef CONFIG_MACH_MITWO
+	}
+#endif
 }
 
 /**

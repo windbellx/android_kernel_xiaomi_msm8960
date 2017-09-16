@@ -112,6 +112,40 @@ struct pm8xxx_mpp_init {
 			PM_GPIO_STRENGTH_HIGH, \
 			PM_GPIO_FUNC_NORMAL, 0, 0)
 
+#ifdef CONFIG_MACH_MITWO
+static struct pm8xxx_gpio_init pm8921_mitwo_gpios[] __initdata = {
+	PM8921_GPIO_OUTPUT(5, 0, HIGH),
+	PM8921_GPIO_OUTPUT(8, 0, HIGH),
+	PM8921_GPIO_INPUT(12, PM_GPIO_PULL_NO),
+	PM8921_GPIO_INPUT(16, PM_GPIO_PULL_NO),
+	PM8921_GPIO_OUTPUT(14, 0, HIGH),
+	PM8921_GPIO_OUTPUT(19, 0, HIGH),
+	PM8921_GPIO_OUTPUT(22, 0, HIGH),
+	PM8921_GPIO_OUTPUT(21, 0, HIGH),
+	PM8921_GPIO_OUTPUT(20, 0, HIGH),
+	PM8921_GPIO_OUTPUT(28, 0, HIGH),
+	PM8921_GPIO_OUTPUT(11, 1, HIGH),
+	PM8921_GPIO_OUTPUT(13, 1, HIGH),
+	PM8921_GPIO_OUTPUT_FUNC(24, 0, PM_GPIO_FUNC_2),
+	PM8921_GPIO_OUTPUT_BUFCONF(25, 1, LOW, CMOS),
+	PM8921_GPIO_OUTPUT(33, 0, HIGH),
+	PM8921_GPIO_OUTPUT(34, 1, MED),
+	PM8921_GPIO_INPUT(37, PM_GPIO_PULL_UP_30),
+};
+
+static struct pm8xxx_gpio_init pm8921_mitwo_kp_gpios[] __initdata = {
+	PM8921_GPIO_INPUT(1, PM_GPIO_PULL_DN),
+	PM8921_GPIO_INPUT(2, PM_GPIO_PULL_DN),
+	PM8921_GPIO_OUTPUT(9, 1, HIGH),
+	PM8921_GPIO_OUTPUT(10, 1, HIGH),
+};
+
+/* Initial PM8XXX MPP configurations */
+static struct pm8xxx_mpp_init pm8xxx_mitwo_mpps[] __initdata = {
+	PM8921_MPP_INIT(7, D_OUTPUT, PM8921_MPP_DIG_LEVEL_S4, DOUT_CTRL_LOW),
+};
+#endif
+
 /* Initial PM8921 GPIO configurations */
 static struct pm8xxx_gpio_init pm8921_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT(14, 1, HIGH),	/* HDMI Mux Selector */
@@ -119,7 +153,11 @@ static struct pm8xxx_gpio_init pm8921_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT_FUNC(26, 0, PM_GPIO_FUNC_2), /* Bl: Off, PWM mode */
 	PM8921_GPIO_OUTPUT_VIN(30, 1, PM_GPIO_VIN_VPH), /* SMB349 susp line */
 	PM8921_GPIO_OUTPUT_BUFCONF(36, 1, LOW, OPEN_DRAIN),
+#ifdef CONFIG_MACH_MITWO
+	PM8921_GPIO_OUTPUT_FUNC(24, 0, PM_GPIO_FUNC_2),
+#else
 	PM8921_GPIO_OUTPUT_FUNC(44, 0, PM_GPIO_FUNC_2),
+#endif
 	PM8921_GPIO_OUTPUT(33, 0, HIGH),
 	PM8921_GPIO_OUTPUT(20, 0, HIGH),
 	PM8921_GPIO_INPUT(35, PM_GPIO_PULL_UP_30),
@@ -212,6 +250,38 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 {
 	int i, rc;
 
+#ifdef CONFIG_MACH_MITWO
+	if (machine_is_mitwo() || machine_is_apq8064_mtp()) {
+		pr_info("%s\n", __func__);
+		for (i = 0; i < ARRAY_SIZE(pm8921_mitwo_gpios); i++) {
+			rc = pm8xxx_gpio_config(pm8921_mitwo_gpios[i].gpio,
+					&pm8921_mitwo_gpios[i].config);
+			if (rc) {
+				pr_err("%s: pm8xxx_gpio_config: rc=%d\n", __func__, rc);
+				break;
+			}
+		}
+		for (i = 0; i < ARRAY_SIZE(pm8921_mitwo_kp_gpios); i++) {
+			rc = pm8xxx_gpio_config(pm8921_mitwo_kp_gpios[i].gpio,
+					&pm8921_mitwo_kp_gpios[i].config);
+			if (rc) {
+				pr_err("%s: pm8xxx_gpio_config: rc=%d\n",
+						__func__, rc);
+				break;
+			}
+		}
+		for (i = 0; i < ARRAY_SIZE(pm8xxx_mitwo_mpps); i++) {
+			rc = pm8xxx_mpp_config(pm8xxx_mitwo_mpps[i].mpp,
+					&pm8xxx_mitwo_mpps[i].config);
+			if (rc) {
+				pr_err("%s: pm8xxx_mpp_config: rc=%d\n", __func__, rc);
+				break;
+			}
+		}
+		return;
+	}
+#endif
+
 	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
 		apq8064_configure_gpios(pm8921_gpios, ARRAY_SIZE(pm8921_gpios));
 	else
@@ -271,7 +341,11 @@ static struct pm8xxx_misc_platform_data apq8064_pm8921_misc_pdata = {
 #define PM8921_LC_LED_MAX_CURRENT	12	/* I = 12mA */
 #define PM8921_LC_LED_LOW_CURRENT	1	/* I = 1mA */
 #define PM8XXX_LED_PWM_PERIOD		1000
+#ifdef CONFIG_MACH_MITWO
+#define PM8XXX_LED_PWM_DUTY_MS		30
+#else
 #define PM8XXX_LED_PWM_DUTY_MS		20
+#endif
 /**
  * PM8XXX_PWM_CHANNEL_NONE shall be used when LED shall not be
  * driven using PWM feature.
@@ -279,6 +353,20 @@ static struct pm8xxx_misc_platform_data apq8064_pm8921_misc_pdata = {
 #define PM8XXX_PWM_CHANNEL_NONE		-1
 
 static struct led_info pm8921_led_info[] = {
+#ifdef CONFIG_MACH_MITWO
+	[0] = {
+		.name			= "red",
+		.default_trigger	= "battery-charging",
+	},
+	[1] = {
+		.name			= "green",
+		.default_trigger	= "battery-full",
+	},
+	[2] = {
+		.name			= "blue",
+		.default_trigger	= "dc-online",
+	},
+#else
 	[0] = {
 		.name			= "led:red",
 		.default_trigger	= "battery-charging",
@@ -287,6 +375,7 @@ static struct led_info pm8921_led_info[] = {
 		.name			= "led:green",
 		.default_trigger	= "battery-full",
 	},
+#endif
 };
 
 static struct led_platform_data pm8921_led_core_pdata = {
@@ -294,6 +383,16 @@ static struct led_platform_data pm8921_led_core_pdata = {
 	.leds = pm8921_led_info,
 };
 
+#ifdef CONFIG_MACH_MITWO
+static int pm8921_led0_pwm_duty_pcts[60] = {
+	0, 0, 0, 1, 1, 2, 3, 4, 5, 6,
+	7, 9, 10, 12, 13, 15, 16, 18, 19, 21,
+	22, 24, 25, 26, 27, 28, 28, 29, 29, 30,
+	30, 30, 29, 29, 28, 28, 27, 26, 25, 24,
+	22, 21, 19, 18, 16, 15, 13, 12, 10, 9,
+	7, 6, 5, 4, 3, 2, 1, 1, 0, 0
+};
+#else
 static int pm8921_led0_pwm_duty_pcts[56] = {
 	1, 4, 8, 12, 16, 20, 24, 28, 32, 36,
 	40, 44, 46, 52, 56, 60, 64, 68, 72, 76,
@@ -302,6 +401,7 @@ static int pm8921_led0_pwm_duty_pcts[56] = {
 	58, 54, 50, 48, 42, 38, 34, 30, 26, 22,
 	14, 10, 6, 4, 1
 };
+#endif
 
 /*
  * Note: There is a bug in LPG module that results in incorrect
@@ -324,6 +424,24 @@ static struct pm8xxx_led_config pm8921_led_configs[] = {
 		.pwm_period_us = PM8XXX_LED_PWM_PERIOD,
 		.pwm_duty_cycles = &pm8921_led0_pwm_duty_cycles,
 	},
+#ifdef CONFIG_MACH_MITWO
+	[1] = {
+		.id = PM8XXX_ID_LED_1,
+		.mode = PM8XXX_LED_MODE_PWM3,
+		.max_current = PM8921_LC_LED_MAX_CURRENT,
+		.pwm_channel = 6,
+		.pwm_period_us = PM8XXX_LED_PWM_PERIOD,
+		.pwm_duty_cycles = &pm8921_led0_pwm_duty_cycles,
+	},
+	[2] = {
+		.id = PM8XXX_ID_LED_2,
+		.mode = PM8XXX_LED_MODE_PWM1,
+		.max_current = PM8921_LC_LED_MAX_CURRENT,
+		.pwm_channel = 4,
+		.pwm_period_us = PM8XXX_LED_PWM_PERIOD,
+		.pwm_duty_cycles = &pm8921_led0_pwm_duty_cycles,
+	},
+#else
 	[1] = {
 		.id = PM8XXX_ID_LED_1,
 		.mode = PM8XXX_LED_MODE_PWM1,
@@ -332,6 +450,7 @@ static struct pm8xxx_led_config pm8921_led_configs[] = {
 		.pwm_period_us = PM8XXX_LED_PWM_PERIOD,
 		.pwm_duty_cycles = &pm8921_led0_pwm_duty_cycles,
 	},
+#endif
 };
 
 static struct pm8xxx_led_platform_data apq8064_pm8921_leds_pdata = {
@@ -369,6 +488,10 @@ static struct pm8xxx_adc_amux apq8064_pm8921_adc_channels_data[] = {
 		ADC_DECIMATION_TYPE2, ADC_SCALE_DEFAULT},
 	{"xo_therm", CHANNEL_MUXOFF, CHAN_PATH_SCALING1, AMUX_RSV0,
 		ADC_DECIMATION_TYPE2, ADC_SCALE_XOTHERM},
+#ifdef CONFIG_MACH_MITWO
+	{"amux_in", ADC_MPP_1_AMUX4, CHAN_PATH_SCALING1, AMUX_RSV1,
+		ADC_DECIMATION_TYPE2, ADC_SCALE_DEFAULT},
+#endif
 };
 
 static struct pm8xxx_adc_properties apq8064_pm8921_adc_data = {
@@ -419,6 +542,29 @@ static int apq8064_pm8921_therm_mitigation[] = {
 #define CHG_TERM_MA		100
 static struct pm8921_charger_platform_data
 apq8064_pm8921_chg_pdata __devinitdata = {
+#ifdef CONFIG_MACH_MITWO
+	//.safety_time		= 480,
+	.update_time		= 60000,
+	.max_voltage		= MAX_VOLTAGE_MV,
+	.min_voltage		= 3200,
+	.uvd_thresh_voltage	= 4050,
+	.resume_voltage_delta	= 20,
+	.term_current		= CHG_TERM_MA,
+	.cool_temp		= 0,
+	.warm_temp		= 45,
+	.batt_id_min		= 0x6000,
+	.batt_id_max		= 0x9500,
+	.temp_check_period	= 1,
+	.max_bat_chg_current	= 1000,
+	.cool_bat_chg_current	= 350,
+	.warm_bat_chg_current	= 350,
+	.cool_bat_voltage	= 4100,
+	.warm_bat_voltage	= 4100,
+	.thermal_mitigation	= apq8064_pm8921_therm_mitigation,
+	.thermal_levels		= ARRAY_SIZE(apq8064_pm8921_therm_mitigation),
+	.cold_thr		= PM_SMBC_BATT_TEMP_COLD_THR__HIGH,
+	.rconn_mohm		= 50,
+#else
 	.update_time		= 60000,
 	.max_voltage		= MAX_VOLTAGE_MV,
 	.min_voltage		= 3200,
@@ -440,6 +586,7 @@ apq8064_pm8921_chg_pdata __devinitdata = {
 	.thermal_levels		= ARRAY_SIZE(apq8064_pm8921_therm_mitigation),
 	.rconn_mohm		= 18,
 	.enable_tcxo_warmup_delay = true,
+#endif
 };
 
 static struct pm8xxx_ccadc_platform_data
@@ -454,7 +601,11 @@ apq8064_pm8921_bms_pdata __devinitdata = {
 	.r_sense_uohm			= 10000,
 	.v_cutoff			= 3400,
 	.max_voltage_uv			= MAX_VOLTAGE_MV * 1000,
+#ifdef CONFIG_MACH_MITWO
+	.rconn_mohm			= 50, /* 25 mohm for each pin*/
+#else
 	.rconn_mohm			= 18,
+#endif
 	.shutdown_soc_valid_limit	= 20,
 	.adjust_soc_low_threshold	= 25,
 	.chg_term_ua			= CHG_TERM_MA * 1000,
@@ -541,8 +692,12 @@ void __init apq8064_init_pmic(void)
 			= msm8064_pm8917_regulator_pdata_len;
 	}
 
-	if (machine_is_apq8064_mtp()) {
+if (machine_is_apq8064_mtp()) {
+#ifdef CONFIG_MACH_MITWO
+		apq8064_pm8921_bms_pdata.battery_type = BATT_UNKNOWN;
+#else
 		apq8064_pm8921_bms_pdata.battery_type = BATT_PALLADIUM;
+#endif
 	} else if (machine_is_apq8064_liquid()) {
 		apq8064_pm8921_bms_pdata.battery_type = BATT_DESAY;
 	} else if (machine_is_apq8064_cdp()) {

@@ -398,6 +398,28 @@ static struct gpiomux_setting gsbi7_func2_cfg = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
+#ifdef CONFIG_MACH_MITWO
+#ifdef CONFIG_MSM_UART_HS_USE_HS
+static struct gpiomux_setting gsbi7_gpio_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
+
+static struct gpiomux_setting gsbi5_func2_cfg = {
+	.func = GPIOMUX_FUNC_2,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting audience_wakeup_active_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+#endif
+
 static struct gpiomux_setting gsbi3_suspended_cfg = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_2MA,
@@ -476,6 +498,14 @@ static struct gpiomux_setting cyts_int_sus_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+
+#ifdef CONFIG_MACH_MITWO
+static struct gpiomux_setting gpio_nc_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#endif
 
 static struct msm_gpiomux_config cyts_gpio_configs[] __initdata = {
 	{	/* TS INTERRUPT */
@@ -585,6 +615,20 @@ static struct gpiomux_setting mxt_int_act_cfg = {
 	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_UP,
 };
+
+#ifdef CONFIG_MACH_MITWO
+static struct gpiomux_setting mhl_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting mhl_int_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+#endif
 
 static struct msm_gpiomux_config apq8064_hdmi_configs[] __initdata = {
 	{
@@ -831,6 +875,32 @@ static struct gpiomux_setting ap2mdm_wakeup = {
 	.drv = GPIOMUX_DRV_4MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+
+#ifdef CONFIG_MACH_MITWO
+static struct gpiomux_setting tp_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting tp_int_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting fte_suspended_cfg = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting fte_active_cfg = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#endif
 
 static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	/* AP2MDM_STATUS */
@@ -1469,6 +1539,150 @@ static struct msm_gpiomux_config mpq8064_uartdm_configs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_MACH_MITWO
+#ifdef CONFIG_AUDIENCE_ES310
+static struct gpiomux_setting anc_mclk_cfg = {
+	.func = GPIOMUX_FUNC_2,
+	.drv = GPIOMUX_DRV_4MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#endif
+
+static struct gpiomux_setting hs_aux_mic_sw_active_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting hs_aux_mic_sw_suspend_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting us_eu_hs_sw_active_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting us_eu_hs_sw_suspend_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting hs_uart_sw_active_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting hs_uart_sw_suspend_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+#ifdef CONFIG_MSM_UART_HS_USE_HS
+	.pull = GPIOMUX_PULL_DOWN,
+#else
+	.pull = GPIOMUX_PULL_UP,
+#endif
+};
+
+static struct msm_gpiomux_config mitwo_gpio_configs[] __initdata = {
+	{	.gpio = 0,
+		.settings = {[GPIOMUX_ACTIVE] = &fte_active_cfg,			[GPIOMUX_SUSPENDED] = &fte_suspended_cfg,},			},
+	{	.gpio = 6,
+		.settings = {[GPIOMUX_ACTIVE] = &tp_int_act_cfg,			[GPIOMUX_SUSPENDED] = &tp_int_sus_cfg,},			},
+	{	.gpio = 8,
+		.settings = {[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,			[GPIOMUX_SUSPENDED] = &gsbi3_suspended_cfg,},			},
+	{	.gpio = 9,
+		.settings = {[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,			[GPIOMUX_SUSPENDED] = &gsbi3_suspended_cfg,},			},
+	{	.gpio = 18,
+		.settings = {								[GPIOMUX_SUSPENDED] = &ap2mdm_cfg,}				},
+	{	.gpio = 19,
+		.settings = {								[GPIOMUX_SUSPENDED] = &mdm2ap_errfatal_cfg,},			},
+	{	.gpio = 20,
+		.settings = {[GPIOMUX_ACTIVE] = &gpio_i2c_config,			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_sus,},			},
+	{	.gpio = 21,
+		.settings = {[GPIOMUX_ACTIVE] = &gpio_i2c_config,			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_sus,},			},
+	{	.gpio = 23,
+		.settings = {[GPIOMUX_ACTIVE] = &mhl_int_act_cfg,			[GPIOMUX_SUSPENDED] = &mhl_int_sus_cfg,},			},
+	{	.gpio = 26,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gpio_nc_sus_cfg,},			},
+	{	.gpio = 27,
+		.settings = {								[GPIOMUX_SUSPENDED] = &ap2mdm_soft_reset_cfg,},			},
+	{	.gpio = 32,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gpio_nc_sus_cfg,},			},
+#ifdef CONFIG_AUDIENCE_ES310
+	{	.gpio = 34,
+		.settings = {[GPIOMUX_ACTIVE] = &anc_mclk_cfg,				[GPIOMUX_SUSPENDED] = &anc_mclk_cfg,},				},
+#endif
+	{	.gpio = 35,
+		.settings = {								[GPIOMUX_SUSPENDED] = &ap2mdm_wakeup,},				},
+	{	.gpio = 36,
+		.settings = {[GPIOMUX_ACTIVE] = &us_eu_hs_sw_active_cfg,		[GPIOMUX_SUSPENDED] = &us_eu_hs_sw_suspend_cfg,},		},
+	{	.gpio = 38,
+		.settings = {[GPIOMUX_ACTIVE] = &hs_aux_mic_sw_active_cfg,		[GPIOMUX_SUSPENDED] = &hs_aux_mic_sw_suspend_cfg,},		},
+	{	.gpio = 39,
+		.settings = {								[GPIOMUX_SUSPENDED] = &cdc_mclk,},				},
+	{	.gpio = 40,
+		.settings = {								[GPIOMUX_SUSPENDED] = &slimbus,},				},
+	{	.gpio = 41,
+		.settings = {								[GPIOMUX_SUSPENDED] = &slimbus,},				},
+	{       .gpio = 46,
+		.settings = {                                                           [GPIOMUX_SUSPENDED] = &mdm2ap_pblrdy,},                         },
+	{       .gpio = 47,
+		.settings = {[GPIOMUX_ACTIVE] = &hsic_wakeup_act_cfg,                   [GPIOMUX_SUSPENDED] = &hsic_wakeup_sus_cfg,},                   },
+	{	.gpio = 48,
+		.settings = {								[GPIOMUX_SUSPENDED] = &ap2mdm_cfg,},				},
+	{	.gpio = 49,
+		.settings = {[GPIOMUX_ACTIVE] = &mdm2ap_status_cfg,			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,},			},
+	{	.gpio = 51,
+		.settings = {[GPIOMUX_ACTIVE] = &audience_wakeup_active_cfg,		[GPIOMUX_SUSPENDED] = &gsbi5_func2_cfg,},			},
+	{	.gpio = 52,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gsbi5_func2_cfg,},			},
+	{	.gpio = 53,
+		.settings = {[GPIOMUX_SUSPENDED] = &gsbi5_suspended_cfg,		[GPIOMUX_ACTIVE] = &gsbi5_active_cfg,},				},
+	{	.gpio = 54,
+		.settings = {[GPIOMUX_SUSPENDED] = &gsbi5_suspended_cfg,		[GPIOMUX_ACTIVE] = &gsbi5_active_cfg,},				},
+	{	.gpio = 62,
+		.settings = {[GPIOMUX_ACTIVE] = &hs_uart_sw_active_cfg,			[GPIOMUX_SUSPENDED] = &hs_uart_sw_suspend_cfg,},		},
+	{	.gpio = 64,
+		.settings = {[GPIOMUX_ACTIVE] = &wcnss_5wire_active_cfg,		[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 65,
+		.settings = {[GPIOMUX_ACTIVE] = &wcnss_5wire_active_cfg,		[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 66,
+		.settings = {[GPIOMUX_ACTIVE] = &wcnss_5wire_active_cfg,		[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 67,
+		.settings = {[GPIOMUX_ACTIVE] = &wcnss_5wire_active_cfg,		[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 68,
+		.settings = {[GPIOMUX_ACTIVE] = &wcnss_5wire_active_cfg,		[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 69,
+		.settings = {[GPIOMUX_ACTIVE] = &hdmi_active_1_cfg,			[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+	{	.gpio = 70,
+		.settings = {[GPIOMUX_ACTIVE] = &hdmi_active_1_cfg,			[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+	{	.gpio = 71,
+		.settings = {[GPIOMUX_ACTIVE] = &hdmi_active_1_cfg,			[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+	{	.gpio = 72,
+		.settings = {[GPIOMUX_ACTIVE] = &hdmi_active_2_cfg,			[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+#ifdef CONFIG_MSM_UART_HS_USE_HS
+	{	.gpio = 82,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gsbi7_gpio_cfg,},			},
+	{	.gpio = 83,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gsbi7_gpio_cfg,},			},
+#else
+	{	.gpio = 82,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gsbi7_func2_cfg,},			},
+	{	.gpio = 83,
+		.settings = {								[GPIOMUX_SUSPENDED] = &gsbi7_func1_cfg,},			},
+#endif
+	{	.gpio = 88,
+		.settings = {[GPIOMUX_ACTIVE] = &hsic_act_cfg,				[GPIOMUX_SUSPENDED] = &hsic_sus_cfg,},				},
+	{	.gpio = 89,
+		.settings = {[GPIOMUX_ACTIVE] = &hsic_act_cfg,				[GPIOMUX_SUSPENDED] = &hsic_sus_cfg,},				},
+};
+#endif //CONFIG_MACH_MITWO
+
 void __init apq8064_init_gpiomux(void)
 {
 	int rc;
@@ -1479,6 +1693,14 @@ void __init apq8064_init_gpiomux(void)
 		pr_err(KERN_ERR "msm_gpiomux_init failed %d\n", rc);
 		return;
 	}
+
+#ifdef CONFIG_MACH_MITWO
+	if (machine_is_mitwo() || machine_is_apq8064_mtp()) {
+		msm_gpiomux_install(mitwo_gpio_configs,
+				ARRAY_SIZE(mitwo_gpio_configs));
+		return;
+	}
+#endif
 
 	msm_gpiomux_install(wcnss_5wire_interface,
 			ARRAY_SIZE(wcnss_5wire_interface));
@@ -1591,7 +1813,7 @@ void __init apq8064_init_gpiomux(void)
 
 	msm_gpiomux_install(apq8064_sdc3_configs,
 			ARRAY_SIZE(apq8064_sdc3_configs));
-	 if (machine_is_mpq8064_hrd() || machine_is_mpq8064_dtv())
+	if (machine_is_mpq8064_hrd() || machine_is_mpq8064_dtv())
 		msm_gpiomux_install(mpq8064_uartdm_configs,
 				ARRAY_SIZE(mpq8064_uartdm_configs));
 }
