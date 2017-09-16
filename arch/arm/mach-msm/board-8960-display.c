@@ -67,6 +67,10 @@
 #define MIPI_CMD_RENESAS_FWVGA_PANEL_NAME	"mipi_cmd_renesas_fwvga"
 #define MIPI_VIDEO_ORISE_720P_PANEL_NAME	"mipi_video_orise_720p"
 #define MIPI_CMD_ORISE_720P_PANEL_NAME		"mipi_cmd_orise_720p"
+#ifdef CONFIG_MACH_MITWO
+#define MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME	"mipi_cmd_renesas_720p"
+#define MIPI_VIDEO_LGD_RENESAS_720PHD_PANEL_NAME	"mipi_video_renesas_720p"
+#endif
 #define HDMI_PANEL_NAME	"hdmi_msm"
 #define TVOUT_PANEL_NAME	"tvout_msm"
 
@@ -107,13 +111,26 @@ static int msm_fb_detect_panel(const char *name)
 				return 0;
 		}
 	} else {
+#ifdef CONFIG_MACH_MITWO
+		if (!strncmp(name, MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME,
+				strnlen(MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME,
+					PANEL_NAME_MAX_LEN)))
+#else
 		if (!strncmp(name, MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 				strnlen(MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 					PANEL_NAME_MAX_LEN)))
+#endif
 			return 0;
 
 #if !defined(CONFIG_FB_MSM_LVDS_MIPI_PANEL_DETECT) && \
 	!defined(CONFIG_FB_MSM_MIPI_PANEL_DETECT)
+#ifdef CONFIG_MACH_MITWO
+		if (!strncmp(name, MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
+				strnlen(MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
+					PANEL_NAME_MAX_LEN)))
+			return 0;
+#endif
+
 		if (!strncmp(name, MIPI_VIDEO_NOVATEK_QHD_PANEL_NAME,
 				strnlen(MIPI_VIDEO_NOVATEK_QHD_PANEL_NAME,
 					PANEL_NAME_MAX_LEN)))
@@ -133,6 +150,13 @@ static int msm_fb_detect_panel(const char *name)
 				strnlen(MIPI_CMD_RENESAS_FWVGA_PANEL_NAME,
 					PANEL_NAME_MAX_LEN)))
 			return 0;
+
+#ifdef CONFIG_MACH_MITWO
+		if (!strncmp(name, MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME,
+				strnlen(MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME,
+					PANEL_NAME_MAX_LEN)))
+			return 0;
+#endif
 
 		if (!strncmp(name, MIPI_VIDEO_TOSHIBA_WUXGA_PANEL_NAME,
 				strnlen(MIPI_VIDEO_TOSHIBA_WUXGA_PANEL_NAME,
@@ -227,6 +251,20 @@ static void mipi_dsi_panel_pwm_cfg(void)
 }
 
 static bool dsi_power_on;
+
+#ifdef CONFIG_MACH_MITWO
+static int mi_panel_id = 0xF;
+
+int mipanel_id(void)
+{
+	return mi_panel_id;
+}
+
+void mipanel_set_id(int id)
+{
+	mi_panel_id = id;
+}
+#endif
 
 /**
  * LiQUID panel on/off
@@ -348,7 +386,11 @@ static int mipi_dsi_liquid_panel_power(int on)
 
 static int mipi_dsi_cdp_panel_power(int on)
 {
+#ifdef CONFIG_MACH_MITWO
+	static struct regulator *reg_l8, *reg_l23, *reg_l2, *reg_l29;
+#else
 	static struct regulator *reg_l8, *reg_l23, *reg_l2;
+#endif
 	static int gpio43;
 	int rc;
 
@@ -377,6 +419,15 @@ static int mipi_dsi_cdp_panel_power(int on)
 				PTR_ERR(reg_l2));
 			return -ENODEV;
 		}
+#ifdef CONFIG_MACH_MITWO
+		reg_l29 = regulator_get(&msm_mipi_dsi1_device.dev,
+				"vci_1p8v");
+		if (IS_ERR(reg_l29)) {
+			pr_err("could not get 8921_l29, rc = %ld\n",
+				PTR_ERR(reg_l29));
+			return -ENODEV;
+		}
+#endif
 		rc = regulator_set_voltage(reg_l8, 2800000, 3000000);
 		if (rc) {
 			pr_err("set_voltage l8 failed, rc=%d\n", rc);
@@ -392,6 +443,13 @@ static int mipi_dsi_cdp_panel_power(int on)
 			pr_err("set_voltage l2 failed, rc=%d\n", rc);
 			return -EINVAL;
 		}
+#ifdef CONFIG_MACH_MITWO
+		rc = regulator_set_voltage(reg_l29, 1800000, 1800000);
+		if (rc) {
+			pr_err("set_voltage l29 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+#endif
 		gpio43 = PM8921_GPIO_PM_TO_SYS(43);
 		rc = gpio_request(gpio43, "disp_rst_n");
 		if (rc) {
@@ -431,8 +489,23 @@ static int mipi_dsi_cdp_panel_power(int on)
 			pr_err("enable l2 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
+#ifdef CONFIG_MACH_MITWO
+		rc = regulator_enable(reg_l29);
+		if (rc) {
+			pr_err("enable l29 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		mdelay(2);
+#endif
 		gpio_set_value_cansleep(gpio43, 1);
+#ifdef CONFIG_MACH_MITWO
+		mdelay(5);
+#endif
 	} else {
+#ifdef CONFIG_MACH_MITWO
+		gpio_set_value_cansleep(gpio43, 0);
+		msleep(20);
+#endif
 		rc = regulator_disable(reg_l2);
 		if (rc) {
 			pr_err("disable reg_l2 failed, rc=%d\n", rc);
@@ -448,6 +521,13 @@ static int mipi_dsi_cdp_panel_power(int on)
 			pr_err("disable reg_l23 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
+#ifdef CONFIG_MACH_MITWO
+		rc = regulator_disable(reg_l29);
+		if (rc) {
+			pr_err("disable reg_l29 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+#endif
 		rc = regulator_set_optimum_mode(reg_l8, 100);
 		if (rc < 0) {
 			pr_err("set_optimum_mode l8 failed, rc=%d\n", rc);
@@ -463,7 +543,9 @@ static int mipi_dsi_cdp_panel_power(int on)
 			pr_err("set_optimum_mode l2 failed, rc=%d\n", rc);
 			return -EINVAL;
 		}
+#ifndef CONFIG_MACH_MITWO
 		gpio_set_value_cansleep(gpio43, 0);
+#endif
 	}
 	return 0;
 }
@@ -717,6 +799,11 @@ static struct msm_hdmi_platform_data hdmi_msm_data = {
 	.cec_power = hdmi_cec_power,
 	.panel_power = hdmi_panel_power,
 	.gpio_config = hdmi_gpio_config,
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_FB_MSM_HDMI_MHL)
+	.is_mhl_enabled = true,
+#endif
+#endif
 };
 
 static struct platform_device hdmi_msm_device = {
@@ -794,6 +881,13 @@ static int hdmi_enable_5v(int on)
 
 	if (on == prev_on)
 		return 0;
+
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_FB_MSM_HDMI_MHL)
+		/* On boards with MHL: only control 5v when mhl is connected */
+		return 0;
+#endif
+#endif
 
 	if (!reg_8921_hdmi_mvs) {
 		reg_8921_hdmi_mvs = regulator_get(&hdmi_msm_device.dev,
@@ -1075,9 +1169,15 @@ void __init msm8960_set_display_params(char *prim_panel, char *ext_panel)
 			msm_fb_pdata.prim_panel_name);
 
 		if (strncmp((char *)msm_fb_pdata.prim_panel_name,
+#ifdef CONFIG_MACH_MITWO
+			MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME,
+			strnlen(MIPI_CMD_LGD_RENESAS_720PHD_PANEL_NAME,
+				PANEL_NAME_MAX_LEN))) {
+#else
 			MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 			strnlen(MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 				PANEL_NAME_MAX_LEN))) {
+#endif
 			/* Disable splash for panels other than Toshiba WSVGA */
 			disable_splash = 1;
 		}
