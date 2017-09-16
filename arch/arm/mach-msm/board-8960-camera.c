@@ -110,6 +110,7 @@ static struct msm_gpiomux_config msm8960_cdp_flash_configs[] = {
 };
 
 static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
+#ifndef CONFIG_MACH_MITWO
 	{
 		.gpio = 2,
 		.settings = {
@@ -117,6 +118,7 @@ static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
 			[GPIOMUX_SUSPENDED] = &cam_settings[0],
 		},
 	},
+#endif
 	{
 		.gpio = 3,
 		.settings = {
@@ -124,6 +126,7 @@ static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
 			[GPIOMUX_SUSPENDED] = &cam_settings[0],
 		},
 	},
+#ifndef CONFIG_MACH_MITWO
 	{
 		.gpio = 4,
 		.settings = {
@@ -131,6 +134,7 @@ static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
 			[GPIOMUX_SUSPENDED] = &cam_settings[0],
 		},
 	},
+#endif
 	{
 		.gpio = 5,
 		.settings = {
@@ -139,7 +143,11 @@ static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
 		},
 	},
 	{
+#ifdef CONFIG_MACH_MITWO
+		.gpio = 78,
+#else
 		.gpio = 76,
+#endif
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &cam_settings[2],
 			[GPIOMUX_SUSPENDED] = &cam_settings[0],
@@ -517,6 +525,20 @@ static struct camera_vreg_t msm_8960_cam_vreg[] = {
 	{"cam_vaf", REG_LDO, 2800000, 2800000, 300000},
 };
 
+static struct camera_vreg_t msm_8960_back_cam_vreg[] = {
+#ifdef CONFIG_MACH_MITWO
+	{"cam_vio", REG_VS, 0, 0, 0},
+	{"cam_vana", REG_LDO, 2800000, 2850000, 85600},
+	{"cam_vaf", REG_LDO, 2800000, 2800000, 300000},
+	{"cam_vdig", REG_LDO, 1200000, 1200000, 105000},
+#else
+	{"cam_vdig", REG_LDO, 1200000, 1200000, 105000},
+	{"cam_vio", REG_VS, 0, 0, 0},
+	{"cam_vana", REG_LDO, 2800000, 2850000, 85600},
+	{"cam_vaf", REG_LDO, 2800000, 2800000, 300000},
+#endif
+};
+
 static struct gpio msm8960_common_cam_gpio[] = {
 	{5, GPIOF_DIR_IN, "CAMIF_MCLK"},
 	{20, GPIOF_DIR_IN, "CAMIF_I2C_DATA"},
@@ -524,7 +546,11 @@ static struct gpio msm8960_common_cam_gpio[] = {
 };
 
 static struct gpio msm8960_front_cam_gpio[] = {
+#ifdef CONFIG_MACH_MITWO
+	{78, GPIOF_DIR_OUT, "CAM_RESET"},
+#else
 	{76, GPIOF_DIR_OUT, "CAM_RESET"},
+#endif
 };
 
 static struct gpio msm8960_back_cam_gpio[] = {
@@ -532,8 +558,13 @@ static struct gpio msm8960_back_cam_gpio[] = {
 };
 
 static struct msm_gpio_set_tbl msm8960_front_cam_gpio_set_tbl[] = {
+#ifdef CONFIG_MACH_MITWO
+	{78, GPIOF_OUT_INIT_LOW, 1000},
+	{78, GPIOF_OUT_INIT_HIGH, 4000},
+#else
 	{76, GPIOF_OUT_INIT_LOW, 1000},
 	{76, GPIOF_OUT_INIT_HIGH, 4000},
+#endif
 };
 
 static struct msm_gpio_set_tbl msm8960_back_cam_gpio_set_tbl[] = {
@@ -586,6 +617,20 @@ static struct msm_actuator_info msm_act_main_cam_1_info = {
 	.vcm_pwd        = 0,
 	.vcm_enable     = 0,
 };
+
+#ifdef CONFIG_MACH_MITWO
+static struct i2c_board_info msm_act_main_cam5_i2c_info = {
+	I2C_BOARD_INFO("msm_actuator", 0x18),
+};
+
+static struct msm_actuator_info msm_act_main_cam_5_info = {
+	.board_info     = &msm_act_main_cam5_i2c_info,
+	.cam_name       = MSM_ACTUATOR_MAIN_CAM_5,
+	.bus_id         = MSM_8960_GSBI4_QUP_I2C_BUS_ID,
+	.vcm_pwd        = 79,
+	.vcm_enable     = 1,
+};
+#endif
 
 static struct msm_camera_sensor_flash_data flash_imx074 = {
 	.flash_type	= MSM_CAMERA_FLASH_LED,
@@ -661,6 +706,72 @@ static struct msm_camera_sensor_info msm_camera_sensor_mt9m114_data = {
 	.camera_type = FRONT_CAMERA_2D,
 	.sensor_type = YUV_SENSOR,
 };
+
+#ifdef CONFIG_MACH_MITWO
+static struct msm_camera_sensor_flash_data flash_imx175 = {
+	.flash_type = MSM_CAMERA_FLASH_LED,
+#ifdef CONFIG_MSM_CAMERA_FLASH
+	.flash_src = &msm_flash_src
+#endif
+};
+
+static struct msm_camera_csi_lane_params imx175_csi_lane_params = {
+	.csi_lane_assign = 0xE4,
+	.csi_lane_mask = 0xF,
+};
+
+static struct msm_camera_sensor_platform_info sensor_board_info_imx175 = {
+	.mount_angle = 90,
+	.cam_vreg = msm_8960_back_cam_vreg,
+	.num_vreg = ARRAY_SIZE(msm_8960_back_cam_vreg),
+	.gpio_conf = &msm_8960_back_cam_gpio_conf,
+	.csi_lane_params = &imx175_csi_lane_params,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_imx175_data = {
+	.sensor_name = "imx175",
+	.pdata = &msm_camera_csi_device_data[0],
+	.flash_data = &flash_imx175,
+	.sensor_platform_info = &sensor_board_info_imx175,
+	.csi_if = 1,
+	.camera_type = BACK_CAMERA_2D,
+	.sensor_type = BAYER_SENSOR,
+	.actuator_info = &msm_act_main_cam_5_info,
+	.eeprom_info = NULL,
+};
+
+static struct msm_camera_sensor_flash_data flash_s5k3h7 = {
+	.flash_type = MSM_CAMERA_FLASH_LED,
+#ifdef CONFIG_MSM_CAMERA_FLASH
+	.flash_src = &msm_flash_src
+#endif
+};
+
+static struct msm_camera_csi_lane_params s5k3h7_csi_lane_params = {
+	.csi_lane_assign = 0xE4,
+	.csi_lane_mask = 0xF,
+};
+
+static struct msm_camera_sensor_platform_info sensor_board_info_s5k3h7 = {
+	.mount_angle = 90,
+	.cam_vreg = msm_8960_back_cam_vreg,
+	.num_vreg = ARRAY_SIZE(msm_8960_back_cam_vreg),
+	.gpio_conf = &msm_8960_back_cam_gpio_conf,
+	.csi_lane_params = &s5k3h7_csi_lane_params,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_s5k3h7_data = {
+	.sensor_name = "s5k3h7",
+	.pdata = &msm_camera_csi_device_data[0],
+	.flash_data = &flash_s5k3h7,
+	.sensor_platform_info = &sensor_board_info_s5k3h7,
+	.csi_if = 1,
+	.camera_type = BACK_CAMERA_2D,
+	.sensor_type = BAYER_SENSOR,
+	.actuator_info = &msm_act_main_cam_5_info,
+	.eeprom_info = NULL,
+};
+#endif
 
 static struct msm_camera_sensor_flash_data flash_ov2720 = {
 	.flash_type	= MSM_CAMERA_FLASH_NONE,
@@ -797,6 +908,35 @@ static struct msm_camera_sensor_info msm_camera_sensor_imx135_data = {
 	.actuator_info = &msm_act_main_cam_1_info,
 };
 
+#ifdef CONFIG_MACH_MITWO
+static struct msm_camera_sensor_flash_data flash_imx132 = {
+	.flash_type	= MSM_CAMERA_FLASH_NONE,
+};
+
+static struct msm_camera_csi_lane_params imx132_csi_lane_params = {
+	.csi_lane_assign = 0xE4,
+	.csi_lane_mask = 0x1,
+};
+
+static struct msm_camera_sensor_platform_info sensor_board_info_imx132 = {
+	.mount_angle	= 270,
+	.cam_vreg = msm_8960_front_cam_vreg,
+	.num_vreg = ARRAY_SIZE(msm_8960_front_cam_vreg),
+	.gpio_conf = &msm_8960_front_cam_gpio_conf,
+	.csi_lane_params = &imx132_csi_lane_params,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_imx132_data = {
+	.sensor_name	= "imx132",
+	.pdata	= &msm_camera_csi_device_data[1],
+	.flash_data	= &flash_imx132,
+	.sensor_platform_info = &sensor_board_info_imx132,
+	.csi_if	= 1,
+	.camera_type = FRONT_CAMERA_2D,
+	.sensor_type = BAYER_SENSOR,
+};
+#endif
+
 static struct pm8xxx_mpp_config_data privacy_light_on_config = {
 	.type		= PM8XXX_MPP_TYPE_SINK,
 	.level		= PM8XXX_MPP_CS_OUT_5MA,
@@ -886,6 +1026,20 @@ void __init msm8960_init_cam(void)
 
 #ifdef CONFIG_I2C
 static struct i2c_board_info msm8960_camera_i2c_boardinfo[] = {
+#ifdef CONFIG_MACH_MITWO
+	{
+	I2C_BOARD_INFO("imx175", 0x20),
+	.platform_data = &msm_camera_sensor_imx175_data,
+	},
+	{
+	I2C_BOARD_INFO("imx132", 0x6C),
+	.platform_data = &msm_camera_sensor_imx132_data,
+	},
+	{
+	I2C_BOARD_INFO("s5k3h7", 0x6E),
+	.platform_data = &msm_camera_sensor_s5k3h7_data,
+	},
+#else
 	{
 	I2C_BOARD_INFO("imx074", 0x1A),
 	.platform_data = &msm_camera_sensor_imx074_data,
@@ -915,6 +1069,7 @@ static struct i2c_board_info msm8960_camera_i2c_boardinfo[] = {
 	I2C_BOARD_INFO("imx091", 0x34),
 	.platform_data = &msm_camera_sensor_imx091_data,
 	},
+#endif
 };
 
 struct msm_camera_board_info msm8960_camera_board_info = {

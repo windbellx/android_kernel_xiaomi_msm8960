@@ -1021,6 +1021,153 @@ static struct msm_gpiomux_config msm8960_sdcc2_configs[] __initdata = {
 };
 #endif
 
+#ifdef CONFIG_MACH_MITWO
+static struct gpiomux_setting uart_switch_suspend_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+#ifdef CONFIG_MSM_UART_HS_USE_HS
+	.pull = GPIOMUX_PULL_DOWN,
+#else
+	.pull = GPIOMUX_PULL_UP,
+#endif
+};
+
+static struct gpiomux_setting gpio_pull_down_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting gpio_pull_none_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+#ifdef CONFIG_MSM_UART_HS_USE_HS
+static struct gpiomux_setting uart_gpio_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
+
+static struct gpiomux_setting gsbi8 = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting pn544_irq_nfc_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+static struct gpiomux_setting pn544_firm_nfc_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_OUT_HIGH,
+};
+
+static struct gpiomux_setting mhl_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting mhl_int_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting batt_id_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct msm_gpiomux_config taurus_gpio_configs[] __initdata = {
+	{	.gpio = 0,
+		.settings = {[GPIOMUX_ACTIVE] = &mdp_vsync_active_cfg,		[GPIOMUX_SUSPENDED] = &mdp_vsync_suspend_cfg,},			},
+	{	.gpio = 1,
+		.settings = {							[GPIOMUX_SUSPENDED] = &batt_id_sus_cfg},			},
+	{	.gpio = 4,
+		.settings = {							[GPIOMUX_SUSPENDED] = &pn544_firm_nfc_cfg,},			},
+	{	.gpio = 11,
+		.settings = {[GPIOMUX_ACTIVE] = &cyts_int_act_cfg,		[GPIOMUX_SUSPENDED] = &cyts_int_sus_cfg,},			},
+	{	.gpio = 12,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gpio_pull_down_cfg,},			},
+	{	.gpio = 16,
+		.settings = {[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,		[GPIOMUX_SUSPENDED] = &gsbi3_suspended_cfg,},			},
+	{	.gpio = 17,
+		.settings = {[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,		[GPIOMUX_SUSPENDED] = &gsbi3_suspended_cfg,},			},
+#ifndef CONFIG_MSM_UART_HS_USE_HS
+	{	.gpio = 22,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi_uart,},				},
+	{	.gpio = 23,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi_uart,},				},
+#else
+	{	.gpio = 22,
+		.settings = {							[GPIOMUX_SUSPENDED] = &uart_gpio_cfg,},				},
+	{	.gpio = 23,
+		.settings = {							[GPIOMUX_SUSPENDED] = &uart_gpio_cfg,},				},
+#endif
+	{	.gpio = 33,
+		.settings = {							[GPIOMUX_SUSPENDED] = &uart_switch_suspend_cfg,},		},
+	{	.gpio = 36,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi8,},					},
+	{	.gpio = 37,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi8,},					},
+	{	.gpio = 39,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gpio_pull_down_cfg,},			},
+	{	.gpio = 44,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi12,},				},
+	{	.gpio = 45,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi12,},				},
+	{	.gpio = 46,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gpio_pull_down_cfg,},			},
+	{	.gpio = 51,
+		.settings = {[GPIOMUX_ACTIVE] = &mhl_int_act_cfg,               [GPIOMUX_SUSPENDED] = &mhl_int_sus_cfg,},			},
+	{	.gpio = 52,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gpio_pull_none_cfg,},			},
+	{	.gpio = 55,
+		.settings = {},															},
+	{	.gpio = 58,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gpio_pull_down_cfg,},			},
+	{	.gpio = 59,
+		.settings = {							[GPIOMUX_SUSPENDED] = &cdc_mclk,},				},
+	{	.gpio = 60,
+		.settings = {							[GPIOMUX_SUSPENDED] = &slimbus,},				},
+	{	.gpio = 61,
+		.settings = {							[GPIOMUX_SUSPENDED] = &slimbus,},				},
+	{	.gpio = 73,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi10,},				},
+	{	.gpio = 74,
+		.settings = {							[GPIOMUX_SUSPENDED] = &gsbi10,},				},
+	{	.gpio = 84,
+		.settings = {[GPIOMUX_ACTIVE]    = &wcnss_5wire_active_cfg,	[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 85,
+		.settings = {[GPIOMUX_ACTIVE]    = &wcnss_5wire_active_cfg,	[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 86,
+		.settings = {[GPIOMUX_ACTIVE]    = &wcnss_5wire_active_cfg,	[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 87,
+		.settings = {[GPIOMUX_ACTIVE]    = &wcnss_5wire_active_cfg,	[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 88,
+		.settings = {[GPIOMUX_ACTIVE]    = &wcnss_5wire_active_cfg,	[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,},		},
+	{	.gpio = 100,
+		.settings = {[GPIOMUX_ACTIVE]    = &hdmi_active_1_cfg,		[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+	{	.gpio = 101,
+		.settings = {[GPIOMUX_ACTIVE]    = &hdmi_active_1_cfg,		[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+	{	.gpio = 102,
+		.settings = {[GPIOMUX_ACTIVE]    = &hdmi_active_2_cfg,		[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,},			},
+	{	.gpio = 106,
+		.settings = {							[GPIOMUX_SUSPENDED] = &pn544_irq_nfc_cfg,},			},
+};
+#endif
+
 int __init msm8960_init_gpiomux(void)
 {
 	int rc = msm_gpiomux_init(NR_GPIO_IRQS);
@@ -1028,6 +1175,15 @@ int __init msm8960_init_gpiomux(void)
 		pr_err(KERN_ERR "msm_gpiomux_init failed %d\n", rc);
 		return rc;
 	}
+
+#ifdef CONFIG_MACH_MITWO
+	if (machine_is_msm8960_cdp()) {
+		pr_info("%s\n", __func__);
+		msm_gpiomux_install(taurus_gpio_configs,
+				ARRAY_SIZE(taurus_gpio_configs));
+		return 0;
+	}
+#endif
 
 #if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE)
 	if (socinfo_get_platform_subtype() != PLATFORM_SUBTYPE_SGLTE)

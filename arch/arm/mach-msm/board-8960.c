@@ -43,6 +43,9 @@
 #include <linux/memory.h>
 #include <linux/memblock.h>
 #include <linux/msm_thermal.h>
+#ifdef CONFIG_MACH_MITWO
+#include <linux/w1-gpio.h>
+#endif
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -76,6 +79,11 @@
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/pdata.h>
 #endif
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_FB_MSM_HDMI_MHL_9244)
+#include <linux/mhl_api.h>
+#endif
+#endif
 
 #include <linux/smsc3503.h>
 #include <linux/msm_ion.h>
@@ -89,6 +97,15 @@
 
 #include <mach/kgsl.h>
 #include <linux/fmem.h>
+#ifdef CONFIG_MACH_MITWO
+#ifdef CONFIG_LEDS_LM3530
+#include <linux/led-lm3530.h>
+#endif
+#ifdef CONFIG_LEDS_LM3554
+#include <linux/leds-lm3554.h>
+#endif
+#include <linux/nfc/pn544.h>
+#endif
 
 #include "timer.h"
 #include "devices.h"
@@ -107,6 +124,15 @@
 #if defined(CONFIG_BT) && defined(CONFIG_BT_HCIUART_ATH3K)
 #include <linux/wlan_plat.h>
 #include <linux/mutex.h>
+#endif
+
+#ifdef CONFIG_MACH_MITWO
+#include <linux/input/ft5x06_ts.h>
+/* header for synaptics touch screen */
+#include <linux/rmi.h>
+#ifdef CONFIG_RMI4_I2C
+#include <linux/firmware.h>
+#endif
 #endif
 
 static struct platform_device msm_fm_platform_init = {
@@ -849,6 +875,12 @@ static void __init msm8960_reserve(void)
 	msm_reserve();
 }
 
+static int msm8960_change_memory_power(u64 start, u64 size,
+	int change_type)
+{
+	return soc_change_memory_power(start, size, change_type);
+}
+
 static void __init msm8960_allocate_memory_regions(void)
 {
 	msm8960_allocate_fb_region();
@@ -1513,10 +1545,17 @@ static struct msm_spi_platform_data msm8960_qup_spi_gsbi1_pdata = {
 static struct msm_otg_platform_data msm_otg_pdata;
 #else
 static int wr_phy_init_seq[] = {
+#ifdef CONFIG_MACH_MITWO
+	0x64, 0x80, /* set VBUS valid threshold
+			and disconnect valid threshold */
+	0x3F, 0x81, /* update DC voltage level */
+	0x30, 0x82, /* set preemphasis and rise/fall time */
+#else
 	0x44, 0x80, /* set VBUS valid threshold
 			and disconnect valid threshold */
 	0x38, 0x81, /* update DC voltage level */
 	0x14, 0x82, /* set preemphasis and rise/fall time */
+#endif
 	0x13, 0x83, /* set source impedance adjusment */
 	-1};
 
@@ -1710,8 +1749,8 @@ static uint8_t spm_power_collapse_with_rpm[] __initdata = {
 			0x24, 0x30, 0x0f,
 };
 
-/* 8960AB has a different command to assert apc_pdn */
-static uint8_t spm_power_collapse_without_rpm_krait_v3[] __initdata = {
+/* 8960AB has a different command to assert apc_pdn */	
+static uint8_t spm_power_collapse_without_rpm_krait_v3[] __initdata = {	
 	0x00, 0x30, 0x24, 0x30,
 	0x84, 0x10, 0x09, 0x03,
 	0x01, 0x10, 0x84, 0x30,
@@ -1862,6 +1901,9 @@ static struct msm_spm_platform_data msm_spm_l2_data[] __initdata = {
 #define HAP_SHIFT_LVL_OE_GPIO_SGLTE	89
 #define PM_HAP_EN_GPIO		PM8921_GPIO_PM_TO_SYS(33)
 #define PM_HAP_LEN_GPIO		PM8921_GPIO_PM_TO_SYS(20)
+#ifdef CONFIG_MACH_MITWO
+#define ISA1200_HAP_PWM         PM8921_GPIO_PM_TO_SYS(25)
+#endif
 
 static struct msm_xo_voter *xo_handle_d1;
 
@@ -1971,11 +2013,24 @@ static struct isa1200_regulator isa1200_reg_data[] = {
 
 static struct isa1200_platform_data isa1200_1_pdata = {
 	.name = "vibrator",
+#ifndef CONFIG_MACH_MITWO
 	.dev_setup = isa1200_dev_setup,
 	.power_on = isa1200_power,
+#endif
 	.hap_en_gpio = PM_HAP_EN_GPIO,
 	.hap_len_gpio = PM_HAP_LEN_GPIO,
 	.max_timeout = 15000,
+#ifdef CONFIG_MACH_MITWO
+	.mode_ctrl = PWM_INPUT_MODE,
+	.pwm_ch_id = 1,
+	.pwm_fd = {
+		.pwm_div = 44800,
+	},
+	.duty = 90,
+	.is_erm = true,
+	.smart_en = false,
+	.ext_clk_en = false,
+#else
 	.mode_ctrl = PWM_GEN_MODE,
 	.pwm_fd = {
 		.pwm_div = 256,
@@ -1983,6 +2038,7 @@ static struct isa1200_platform_data isa1200_1_pdata = {
 	.is_erm = false,
 	.smart_en = true,
 	.ext_clk_en = true,
+#endif
 	.chip_en = 1,
 	.regulator_info = isa1200_reg_data,
 	.num_regulators = ARRAY_SIZE(isa1200_reg_data),
@@ -1993,6 +2049,183 @@ static struct i2c_board_info msm_isa1200_board_info[] __initdata = {
 		I2C_BOARD_INFO("isa1200_1", 0x90>>1),
 	},
 };
+
+#ifdef CONFIG_MACH_MITWO
+#define PN544_NFC_GPIO_IRQ 106
+#define PN544_NFC_GPIO_FIRM 4
+
+static struct pn544_i2c_platform_data pn544_pdata = {
+	.irq_gpio = PN544_NFC_GPIO_IRQ,
+	.ven_gpio = PM8921_GPIO_PM_TO_SYS(7),
+	.firm_gpio = PN544_NFC_GPIO_FIRM,
+};
+static struct i2c_board_info pn544_nfc_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("pn544", 0x28),
+		.irq = MSM_GPIO_TO_INT(PN544_NFC_GPIO_IRQ),
+		.platform_data = &pn544_pdata,
+	},
+};
+
+#if defined(CONFIG_LEDS_LM3530)
+#define LM3530_EN_GPIO                 PM8921_GPIO_PM_TO_SYS(22)
+
+static struct lm3530_platform_data lm3530_40_pdata = {
+	.mode = LM3530_BL_MODE_I2C_PWM,
+	.max_current = 0x5,
+	.pwm_pol_hi = 0,
+	.brt_ramp_law = 0x1,            /* linear */
+	.brt_ramp_fall = 0,
+	.brt_ramp_rise = 0,
+	.brt_val = 0,
+	.bl_en_gpio = LM3530_EN_GPIO,
+	.regulator_used = 0,
+};
+
+static struct i2c_board_info lm3530_board_info[] __initdata = {
+	{
+	       I2C_BOARD_INFO("lm3530-led", 0x38),
+	       .platform_data = &lm3530_40_pdata,
+	},
+};
+#endif
+
+#if defined(CONFIG_LEDS_LM3554)
+#define VFE_CAMIF_TIMER1_GPIO   PM8921_GPIO_PM_TO_SYS(32)
+#define VFE_CAMIF_TIMER2_GPIO   3
+
+static struct lm3554_platform_data lm3554_led_flash = {
+	.torch_brightness_def = 0xa0,
+	.flash_brightness_def = 0x78,
+	.flash_duration_def = 0x0f,
+	.config_reg_1_def = 0xe0,
+	.config_reg_2_def = 0xf0,
+	.vin_monitor_def = 0x01,
+	.gpio_reg_def = 0x0,
+	.hwen_gpio = VFE_CAMIF_TIMER1_GPIO,
+	.strobe_gpio = VFE_CAMIF_TIMER2_GPIO,
+};
+
+static struct i2c_board_info lm3554_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("lm3554", 0x53),
+		.platform_data = &lm3554_led_flash,
+	}
+};
+#endif
+
+#if defined(CONFIG_FB_MSM_HDMI_MHL_9244)
+#define MITWOA_GPIO_MHL_RESET      39
+#define MITWOA_GPIO_MHL_INT        51
+#define MITWOA_GPIO_MHL_WAKEUP     52
+
+static int sii9244_power_setup(int on)
+{
+	int rc;
+	static bool mhl_power_on;
+	int mhl_1v8_gpio = 12;
+	int mhl_3v3_gpio = PM8921_GPIO_PM_TO_SYS(19);
+	int hdmi_1v8_3v3_gpio = PM8921_GPIO_PM_TO_SYS(21);
+
+	if (!mhl_power_on) {
+		rc = gpio_request(mhl_1v8_gpio, "mhl_1v8_gpio");
+		if (rc) {
+			pr_err("request pm8921 gpio 14 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		rc = gpio_request(mhl_3v3_gpio, "mhl_3v3_gpio");
+		if (rc) {
+			pr_err("request pm8921 gpio 19 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+		rc = gpio_request(hdmi_1v8_3v3_gpio, "hdmi_1v8_3v3_gpio");
+		if (rc) {
+			pr_err("request pm8921 gpio 21 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		mhl_power_on = true;
+	}
+
+	if (on) {
+		gpio_direction_output(mhl_1v8_gpio, 1);
+		gpio_direction_output(mhl_3v3_gpio, 1);
+		gpio_direction_output(hdmi_1v8_3v3_gpio, 1);
+	} else {
+		gpio_direction_output(mhl_1v8_gpio, 0);
+		gpio_direction_output(mhl_3v3_gpio, 0);
+		gpio_direction_output(hdmi_1v8_3v3_gpio, 0);
+	}
+
+	return 0;
+}
+
+static void sii9244_reset(int on)
+{
+	int rc;
+	static bool mhl_first_reset;
+	int mhl_gpio_reset = MITWOA_GPIO_MHL_RESET;
+
+	if (!mhl_first_reset) {
+		rc = gpio_request(mhl_gpio_reset, "mhl_rst");
+		if (rc) {
+			pr_err("Sii9244 reset request gpio 39 failed, rc=%d\n", rc);
+			return;
+		}
+		mhl_first_reset = true;
+	}
+
+	if (on) {
+		gpio_direction_output(mhl_gpio_reset, 0);
+		msleep(10);
+		gpio_direction_output(mhl_gpio_reset, 1);
+	} else {
+		gpio_direction_output(mhl_gpio_reset, 0);
+	}
+}
+
+#if defined(CONFIG_FB_MSM_HDMI_MHL_RCP)
+static int sii9244_key_codes[] = {
+	KEY_1, KEY_2, KEY_3, KEY_4, KEY_5,
+	KEY_6, KEY_7, KEY_8, KEY_9, KEY_0,
+	KEY_SELECT, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
+	KEY_MENU, KEY_EXIT, KEY_DOT, KEY_ENTER,
+	KEY_CLEAR, KEY_SOUND,
+	KEY_PLAY, KEY_PAUSE, KEY_STOP, KEY_FASTFORWARD, KEY_REWIND,
+	KEY_EJECTCD, KEY_FORWARD, KEY_BACK,
+	KEY_PLAYCD, KEY_PAUSECD, KEY_STOP,
+};
+#endif
+
+static struct mhl_platform_data mhl_sii9244_pdata = {
+	.mhl_gpio_reset =	MITWOA_GPIO_MHL_RESET,
+	.mhl_gpio_wakeup =	MITWOA_GPIO_MHL_WAKEUP,
+	.power_setup =		sii9244_power_setup,
+	.reset =		sii9244_reset,
+#if defined(CONFIG_FB_MSM_HDMI_MHL_RCP)
+	.mhl_key_codes =	sii9244_key_codes,
+	.mhl_key_num =		ARRAY_SIZE(sii9244_key_codes),
+#endif
+};
+
+static struct i2c_board_info mhl_sii9244_board_info[] = {
+	{
+		I2C_BOARD_INFO("mhl_Sii9244_page0", 0x39),
+		.platform_data = &mhl_sii9244_pdata,
+		.irq = MSM_GPIO_TO_INT(MITWOA_GPIO_MHL_INT),
+	},
+	{
+		I2C_BOARD_INFO("mhl_Sii9244_page1", 0x3D),
+	},
+	{
+		I2C_BOARD_INFO("mhl_Sii9244_page2", 0x49),
+	},
+	{
+		I2C_BOARD_INFO("mhl_Sii9244_cbus", 0x64),
+	},
+};
+#endif
+#endif //CONFIG_MACH_MITWO
 
 #define CYTTSP_TS_GPIO_IRQ		11
 #define CYTTSP_TS_SLEEP_GPIO		50
@@ -2471,8 +2704,316 @@ static struct i2c_board_info sii_device_info[] __initdata = {
 	},
 };
 
-static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi4_pdata = {
+#ifdef CONFIG_MACH_MITWO
+#define TP_GPIO_POWER			58
+#define TP_GPIO_RESET			46
+#define TP_GPIO_INTR			11
+
+#define FT5X0X_I2C_VTG_MIN_UV		1800000
+#define FT5X0X_I2C_VTG_MAX_UV		1800000
+
+#ifdef CONFIG_TOUCHSCREEN_FT5X06
+static struct regulator *ft5x06_vcc_i2c;
+static int ft5x06_power_on(bool on)
+{
+	int rc;
+	if (on) {
+		pr_info("power is on\n");
+		ft5x06_vcc_i2c = regulator_get(NULL, "8921_lvs4");
+		if (IS_ERR(ft5x06_vcc_i2c)) {
+			rc = PTR_ERR(ft5x06_vcc_i2c);
+			pr_err("Regulator get failed rc=%d\n", rc);
+			return 0;
+		}
+		if (regulator_count_voltages(ft5x06_vcc_i2c) > 0) {
+			rc = regulator_set_voltage(ft5x06_vcc_i2c,
+				FT5X0X_I2C_VTG_MIN_UV, FT5X0X_I2C_VTG_MAX_UV);
+			if (rc) {
+				pr_err("regulator set_vtg failed rc=%d\n", rc);
+				return rc;
+			}
+		}
+		rc = regulator_enable(ft5x06_vcc_i2c);
+		if (rc) {
+			regulator_put(ft5x06_vcc_i2c);
+			return rc;
+		}
+		gpio_set_value(TP_GPIO_POWER, on);
+		msleep(100);
+	} else {
+		pr_info("power is off\n");
+		gpio_set_value(TP_GPIO_POWER, on);
+		msleep(100);
+		if (ft5x06_vcc_i2c) {
+			rc = regulator_disable(ft5x06_vcc_i2c);
+			if (rc)
+				return rc;
+			regulator_put(ft5x06_vcc_i2c);
+		}
+
+	}
+	return 0;
+}
+
+static int ft5x06_power_init(bool configure)
+{
+	int error = 0;
+
+	if (configure) {
+		error = gpio_request(TP_GPIO_POWER, "ft5x06_gpio_power");
+		if (!error) {
+			error = gpio_direction_output(TP_GPIO_POWER, 0);
+			if (error) {
+				gpio_free(TP_GPIO_POWER);
+				pr_err("%s: unable to set direction gpio %d\n",
+				__func__, TP_GPIO_POWER);
+				return error;
+			}
+		} else {
+			pr_err("%s: unable to request power gpio %d\n",
+			__func__, TP_GPIO_POWER);
+			return error;
+		}
+
+	} else
+		gpio_free(TP_GPIO_POWER);
+
+	return error;
+}
+
+static unsigned char firmware_data[] = {
+	#include "ft5x06_firmware.h"
+};
+
+static const struct ft5x06_firmware_data ft5x06_firmware_data[] = {
+	{0xA5, firmware_data, sizeof(firmware_data)},
+};
+
+static const unsigned int ft5x06_keypad_map[] = {
+	KEY_MENU, KEY_HOME, KEY_BACK,
+};
+
+static const struct ft5x06_rect ft5x06_keypad_button[] = {
+		{130, 1300, 10, 50},
+		{355, 1300, 10, 50},
+		{580, 1300, 10, 50},
+};
+
+static const int ft5x06_key_pos[] = {2, 6, 10};
+
+static const struct ft5x06_keypad_data ft5x06_keypad_data = {
+	.length = 3,
+	.keymap = ft5x06_keypad_map,
+	.button = ft5x06_keypad_button,
+	.key_pos = ft5x06_key_pos,
+};
+
+static struct ft5x06_ts_platform_data ft5x06_data = {
+	.x_max		= 720,
+	.y_max		= 1280,
+	.z_max		= 255,
+	.w_max		= 200,
+	.irq_gpio		= TP_GPIO_INTR,
+	.firmware		= ft5x06_firmware_data,
+	.reset_gpio	= TP_GPIO_RESET,
+	.landing_jiffies	= HZ / 8,
+	.landing_threshold	= 16,
+	.staying_threshold	= 8,
+	.tx_num		= 24,
+	.rx_num                = 13,
+	.raw_min		= 7000,
+	.raw_max		= 10000,
+	.keypad		= &ft5x06_keypad_data,
+	.power_init	= ft5x06_power_init,
+	.power_on	= ft5x06_power_on,
+};
+
+static struct i2c_board_info ft5x06_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("ft5x06_i2c", 0x38),
+		.platform_data = &ft5x06_data,
+	},
+};
+#endif
+
+#define RMI4_I2C_VTG_MIN_UV		1800000
+#define RMI4_I2C_VTG_MAX_UV		1800000
+/* synaptic touch-screen related functions */
+#ifdef CONFIG_RMI4_I2C
+static int rmi_power_on(bool on)
+{
+	struct regulator *vcc_i2c;
+	int rc;
+	pr_info("power is on\n");
+
+	vcc_i2c = regulator_get(NULL, "8921_lvs4");
+	if (IS_ERR(vcc_i2c)) {
+		rc = PTR_ERR(vcc_i2c);
+		pr_err("Regulator get failed rc=%d\n", rc);
+		return 0;
+	}
+	if (regulator_count_voltages(vcc_i2c) > 0) {
+		rc = regulator_set_voltage(vcc_i2c,
+			RMI4_I2C_VTG_MIN_UV, RMI4_I2C_VTG_MAX_UV);
+		if (rc) {
+			pr_err("regulator set_vtg failed rc=%d\n", rc);
+			return 0;
+		}
+	}
+	regulator_enable(vcc_i2c);
+
+	gpio_set_value(TP_GPIO_POWER, on != false);
+	msleep(100);
+	return 0;
+}
+
+static int rmi_gpio_config(void *gpio_data, bool configure)
+{
+	int error = 0;
+
+	if (configure) {
+		error = gpio_request(TP_GPIO_POWER, "rmi4_gpio_power");
+		if (!error) {
+			error = gpio_direction_output(TP_GPIO_POWER, 0);
+			if (error) {
+				gpio_free(TP_GPIO_POWER);
+				pr_err("%s: unable to set direction gpio %d\n",
+				__func__, TP_GPIO_POWER);
+				return error;
+			}
+		} else {
+			pr_err("%s: unable to request power gpio %d\n",
+			__func__, TP_GPIO_POWER);
+			return error;
+		}
+
+		error = gpio_request(TP_GPIO_RESET, "rmi4_gpio_reset");
+		if (!error) {
+			error = gpio_direction_output(TP_GPIO_RESET, 1);
+			if (error) {
+				gpio_free(TP_GPIO_RESET);
+				pr_err("%s: unable to set direction gpio %d\n",
+				__func__, TP_GPIO_RESET);
+				return error;
+			}
+		} else {
+			pr_err("%s: unable to request reset gpio %d\n",
+			__func__, TP_GPIO_RESET);
+			return error;
+		}
+
+		error = gpio_request(TP_GPIO_INTR, "rmi_intr");
+		if (error < 0) {
+			pr_err("%s: gpio_request fail", __func__);
+			return error;
+		}
+
+		error = gpio_direction_input(TP_GPIO_INTR);
+		if (error < 0) {
+			pr_err("%s: gpio_direction_input fail", __func__);
+			gpio_free(TP_GPIO_INTR);
+			return error;
+		}
+
+		rmi_power_on(true);
+	} else {
+		rmi_power_on(false);
+		gpio_free(TP_GPIO_INTR);
+		gpio_free(TP_GPIO_RESET);
+		gpio_free(TP_GPIO_POWER);
+	}
+
+	return error;
+}
+
+/* add built-in firmware to the kernel */
+#include "rmi_firmware_jtouch_ito_taurus.h"
+#include "rmi_factory_test_data_jtouch_taurus.h"
+#include "rmi_firmware_wintek_ito_taurus.h"
+#include "rmi_factory_test_data_wintek_taurus.h"
+#define JTOUCH_FIRMWARE_NAME	"rmi4/s3202_ver5.img"
+#define WINTEK_FIRMWARE_NAME	"rmi4/WTK001.img.img"
+DECLARE_BUILTIN_FIRMWARE(JTOUCH_FIRMWARE_NAME, rmi_firmware_jtouch_ito);
+DECLARE_BUILTIN_FIRMWARE(WINTEK_FIRMWARE_NAME, rmi_firmware_wintek_ito);
+
+static unsigned char rmi_key_map[] = {KEY_MENU, KEY_HOME, KEY_BACK};
+
+static struct rmi_button_map rmi_button_map_s3202 = {
+	.nbuttons		= 3,
+	.map			= rmi_key_map,
+};
+
+static struct rmi_f54_self_test_data rmi_self_test_data_jtouch[] = {
+	{min_max_jtouch, sizeof(min_max_jtouch)},
+	{full_raw_capacitance_jtouch, sizeof(full_raw_capacitance_jtouch)},
+	{high_resistance_jtouch, sizeof(high_resistance_jtouch)},
+};
+
+static struct rmi_f54_self_test_data rmi_self_test_data_wintek[] = {
+	{min_max_wintek, sizeof(min_max_wintek)},
+	{full_raw_capacitance_wintek, sizeof(full_raw_capacitance_wintek)},
+	{high_resistance_wintek, sizeof(high_resistance_wintek)},
+};
+
+static struct rmi_config_info rmi_config_info_array[] = {
+	{
+		.product_name = "s3202_ver5",
+		.self_test_data = rmi_self_test_data_jtouch,
+	},
+	{
+		.product_name = "WTK001.img",
+		.self_test_data = rmi_self_test_data_wintek,
+	},
+};
+
+static struct rmi_device_platform_data rmi_data = {
+	.driver_name		= "rmi_generic",
+	.sensor_name		= "s3202",
+	.attn_gpio		= TP_GPIO_INTR,
+	.attn_polarity		= RMI_ATTN_ACTIVE_LOW,
+	.level_triggered	= true,
+	.gpio_config		= rmi_gpio_config,
+	.axis_align		= {
+		.flip_x			= 1,
+		.flip_y			= 1,
+		.staying_threshold	= 12,
+		.landing_threshold	= 24,
+		.landing_jiffies	= HZ/8,
+	},
+	.f11_type_b		= true,
+	.reset_delay_ms		= 65,
+	.power_management	= {
+		.nosleep		= RMI_F01_NOSLEEP_ON,
+	},
+	.f1a_button_map		= &rmi_button_map_s3202,
+	.config_info_array	= rmi_config_info_array,
+	.config_array_size	= sizeof(rmi_config_info_array) / sizeof(struct rmi_config_info),
+};
+
+static struct i2c_board_info rmi_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("rmi_i2c", 0x22),
+		.platform_data = &rmi_data,
+	},
+	{
+		I2C_BOARD_INFO("rmi_i2c", 0x20),
+		.platform_data = &rmi_data,
+	},
+};
+#endif
+
+static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi8_pdata = {
 	.clk_freq = 100000,
+	.src_clk_rate = 24000000,
+};
+#endif //CONFIG_MACH_MITWO
+
+static struct msm_i2c_platform_data msm8960_i2c_qup_gsbi4_pdata = {
+#ifdef CONFIG_MACH_MITWO
+	.clk_freq = 400000,
+#else
+	.clk_freq = 100000,
+#endif
 	.src_clk_rate = 24000000,
 	.keep_ahb_clk_on = 1,
 };
@@ -2566,6 +3107,22 @@ static struct platform_device battery_bcl_device = {
 	.id = -1,
 	};
 #endif
+
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_W1_MASTER_GPIO) || defined(CONFIG_W1_MASTER_GPIO_MODULE)
+static struct w1_gpio_platform_data w1_gpio_pdata = {
+	/* If you choose to use a pin other than PB16 it needs to be 3.3V */
+	.pin		= 1,
+	.is_open_drain  = 0,
+};
+
+static struct platform_device w1_device = {
+	.name			= "w1-gpio",
+	.id			= -1,
+	.dev.platform_data	= &w1_gpio_pdata,
+};
+#endif
+#endif //CONFIG_MACH_MITWO
 
 static struct platform_device msm8960_device_ext_5v_vreg __devinitdata = {
 	.name	= GPIO_REGULATOR_DEV_NAME,
@@ -2797,6 +3354,9 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm8960_device_qup_spi_gsbi1,
 	&msm8960_device_qup_i2c_gsbi3,
 	&msm8960_device_qup_i2c_gsbi4,
+#ifdef CONFIG_MACH_MITWO
+	&msm8960_device_qup_i2c_gsbi8,
+#endif
 	&msm8960_device_qup_i2c_gsbi10,
 #ifndef CONFIG_MSM_DSPS
 	&msm8960_device_qup_i2c_gsbi12,
@@ -2932,6 +3492,11 @@ static struct platform_device *cdp_devices[] __initdata = {
 
 static void __init msm8960_i2c_init(void)
 {
+#ifdef CONFIG_MACH_MITWO
+	msm8960_device_qup_i2c_gsbi8.dev.platform_data =
+					&msm8960_i2c_qup_gsbi8_pdata;
+#endif
+
 	msm8960_device_qup_i2c_gsbi4.dev.platform_data =
 					&msm8960_i2c_qup_gsbi4_pdata;
 
@@ -3068,7 +3633,11 @@ static struct msm_rpmrs_platform_data msm_rpmrs_data __initdata = {
 	.vdd_mask = 0x7FFFFF,
 	.rpmrs_target_id = {
 		[MSM_RPMRS_ID_PXO_CLK]		= MSM_RPM_ID_PXO_CLK,
+#ifdef CONFIG_MACH_MITWO
+		[MSM_RPMRS_ID_L2_CACHE_CTL]	= MSM_RPM_ID_APPS_L2_CACHE_CTL,
+#else
 		[MSM_RPMRS_ID_L2_CACHE_CTL]	= MSM_RPM_ID_LAST,
+#endif
 		[MSM_RPMRS_ID_VDD_DIG_0]	= MSM_RPM_ID_PM8921_S3_0,
 		[MSM_RPMRS_ID_VDD_DIG_1]	= MSM_RPM_ID_PM8921_S3_1,
 		[MSM_RPMRS_ID_VDD_MEM_0]	= MSM_RPM_ID_PM8921_L24_0,
@@ -3221,14 +3790,29 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		mxt_device_info,
 		ARRAY_SIZE(mxt_device_info),
 	},
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_FB_MSM_HDMI_MHL_9244)
 	{
+		I2C_SURF | I2C_LIQUID | I2C_FFA,
+		MSM_8960_GSBI8_QUP_I2C_BUS_ID,
+		mhl_sii9244_board_info,
+		ARRAY_SIZE(mhl_sii9244_board_info),
+	},
+#endif
+#else
+{
 		I2C_SURF | I2C_FFA | I2C_LIQUID,
 		MSM_8960_GSBI10_QUP_I2C_BUS_ID,
 		sii_device_info,
 		ARRAY_SIZE(sii_device_info),
 	},
+#endif
 	{
+#ifdef CONFIG_MACH_MITWO
+		I2C_SURF | I2C_LIQUID | I2C_FFA,
+#else
 		I2C_LIQUID | I2C_FFA,
+#endif
 		MSM_8960_GSBI10_QUP_I2C_BUS_ID,
 		msm_isa1200_board_info,
 		ARRAY_SIZE(msm_isa1200_board_info),
@@ -3240,7 +3824,49 @@ static struct i2c_registry msm8960_i2c_devices[] __initdata = {
 		liquid_io_expander_i2c_info,
 		ARRAY_SIZE(liquid_io_expander_i2c_info),
 	},
+#ifdef CONFIG_MACH_MITWO
+	/* Added for pn544 nfc support */
+	{
+		I2C_SURF,
+		MSM_8960_GSBI8_QUP_I2C_BUS_ID,
+		pn544_nfc_info,
+		ARRAY_SIZE(pn544_nfc_info),
+	},
+#ifdef CONFIG_LEDS_LM3530
+	{
+		I2C_SURF,
+		MSM_8960_GSBI10_QUP_I2C_BUS_ID,
+		lm3530_board_info,
+		ARRAY_SIZE(lm3530_board_info),
+	},
 #endif
+#if defined(CONFIG_LEDS_LM3554)
+	{
+		I2C_SURF,
+		MSM_8960_GSBI10_QUP_I2C_BUS_ID,
+	        lm3554_board_info,
+	        ARRAY_SIZE(lm3554_board_info),
+	},
+#endif
+	/* Added for forcal touch panel support */
+#ifdef CONFIG_TOUCHSCREEN_FT5X06_I2C
+	{
+		I2C_SURF | I2C_FFA,
+		MSM_8960_GSBI3_QUP_I2C_BUS_ID,
+		ft5x06_i2c_info,
+		ARRAY_SIZE(ft5x06_i2c_info),
+	},
+#endif
+	/* Added for synaptic touch panel support */
+#if defined(CONFIG_RMI4_I2C)
+	{
+		I2C_SURF | I2C_FFA,
+		MSM_8960_GSBI3_QUP_I2C_BUS_ID,
+		rmi_i2c_info,
+		ARRAY_SIZE(rmi_i2c_info),
+	},
+#endif
+#endif //CONFIG_MACH_MITWO
 };
 #endif /* CONFIG_I2C */
 
@@ -3395,9 +4021,15 @@ static void __init msm8960_cdp_init(void)
 		spi_register_board_info(spi_eth_info, ARRAY_SIZE(spi_eth_info));
 
 	msm8960_init_pmic();
+#ifdef CONFIG_MACH_MITWO
+	/* FIXME use Taurus mach type later
+	if ((SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2 &&
+		(machine_is_msm8960_mtp())) || machine_is_msm8960_liquid()) */
+#else
 	if (machine_is_msm8960_liquid() || (machine_is_msm8960_mtp() &&
 		(socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE ||
 			cpu_is_msm8960ab())))
+#endif
 		msm_isa1200_board_info[0].platform_data = &isa1200_1_pdata;
 	msm8960_i2c_init();
 	msm8960_gfx_init();
@@ -3447,6 +4079,12 @@ static void __init msm8960_cdp_init(void)
 		platform_device_register(&msm8960_device_acpuclk);
 	platform_add_devices(common_devices, ARRAY_SIZE(common_devices));
 	msm8960_add_vidc_device();
+
+#ifdef CONFIG_MACH_MITWO
+#if defined(CONFIG_W1_MASTER_GPIO) || defined(CONFIG_W1_MASTER_GPIO_MODULE)
+	platform_device_register(&w1_device);
+#endif
+#endif
 
 	msm8960_pm8921_gpio_mpp_init();
 	/* Don't add modem devices on APQ targets */

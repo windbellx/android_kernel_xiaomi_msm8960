@@ -295,6 +295,9 @@ static struct mmc_platform_data msm8960_sdc1_data = {
 	.pin_data	= &mmc_slot_pin_data[SDCC1],
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC1_DAT1,
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
+#ifdef CONFIG_MACH_MITWO
+	.uhs_caps	= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50,
+#endif
 	.uhs_caps2	= MMC_CAP2_HS200_1_8V_SDR,
 	.packed_write	= MMC_CAP2_PACKED_WR | MMC_CAP2_PACKED_WR_CONTROL,
 };
