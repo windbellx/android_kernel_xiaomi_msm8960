@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Samsung Electronics Co.Ltd
  * Author: Joonyoung Shim <jy0922.shim@samsung.com>
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -32,6 +32,10 @@
 /* Bootoader IDs */
 #define MXT_BOOTLOADER_ID_224		0x0A
 #define MXT_BOOTLOADER_ID_224E		0x06
+#ifdef CONFIG_MACH_MITWO
+#define MXT_BOOTLOADER_ID_336S		0x1A
+#define MXT_BOOTLOADER_ID_384E		0x08
+#endif
 #define MXT_BOOTLOADER_ID_1386		0x01
 #define MXT_BOOTLOADER_ID_1386E		0x10
 
@@ -46,6 +50,10 @@ struct mxt_config_info {
 	u8 bootldr_id;
 	/* Points to the firmware name to be upgraded to */
 	const char *fw_name;
+#ifdef CONFIG_MACH_MITWO
+	u8 key_gain;
+	u8 key_threshold;
+#endif
 };
 
 /* The platform data for the Atmel maXTouch touchscreen driver */
@@ -72,7 +80,14 @@ struct mxt_platform_data {
 	u32 reset_gpio_flags;
 	int irq_gpio;
 	u32 irq_gpio_flags;
+#ifdef CONFIG_MACH_MITWO
+	int lcd_gpio;
+#endif
 	int *key_codes;
+#ifdef CONFIG_MACH_MITWO
+	int move_threshold;
+	int max_ref;
+#endif
 
 	u8(*read_chg) (void);
 	int (*init_hw) (bool);
