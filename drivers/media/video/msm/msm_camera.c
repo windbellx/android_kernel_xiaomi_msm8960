@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2012, 2015 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,7 +28,7 @@
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/uaccess.h>
-
+#include <linux/android_pmem.h>
 #include <linux/poll.h>
 #include <media/msm_camera.h>
 #include <mach/camera.h>
@@ -280,11 +280,10 @@ static int check_overlap(struct hlist_head *ptype,
 static int check_pmem_info(struct msm_pmem_info *info, int len)
 {
 	if (info->offset < len &&
-		info->offset <= (UINT_MAX - info->len) &&
-		info->offset + info->len <= len &&
-		info->planar0_off < len &&
-		info->planar1_off < len &&
-		info->planar2_off < len)
+	    info->offset + info->len <= len &&
+	    info->planar0_off < len &&
+	    info->planar1_off < len &&
+	    info->planar2_off < len)
 		return 0;
 
 	pr_err("%s: check failed: off %d len %d y 0x%x cbcr_p1 0x%x p2_add 0x%x(total len %d)\n",
@@ -320,6 +319,15 @@ static int msm_pmem_table_add(struct hlist_head *ptype,
 			goto out1;
 		ion_phys(client_for_ion, region->handle,
 			&paddr, (size_t *)&len);
+#else
+	rc = get_pmem_file(info->fd, &paddr, &kvstart, &len, &file);
+	if (rc < 0) {
+		pr_err("%s: get_pmem_file fd %d error %d\n",
+			__func__,
+			info->fd, rc);
+		goto out1;
+	}
+	region->file = file;
 #endif
 	if (!info->len)
 		info->len = len;
@@ -356,6 +364,8 @@ static int msm_pmem_table_add(struct hlist_head *ptype,
 out2:
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	ion_free(client_for_ion, region->handle);
+#else
+	put_pmem_file(region->file);
 #endif
 out1:
 	kfree(region);
@@ -639,6 +649,8 @@ static int __msm_pmem_table_del(struct msm_sync *sync,
 				hlist_del(node);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_free(client_for_ion, region->handle);
+#else
+				put_pmem_file(region->file);
 #endif
 				kfree(region);
 				CDBG("%s: type %d, vaddr  0x%p\n",
@@ -661,6 +673,8 @@ static int __msm_pmem_table_del(struct msm_sync *sync,
 				hlist_del(node);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_free(client_for_ion, region->handle);
+#else
+				put_pmem_file(region->file);
 #endif
 				kfree(region);
 				CDBG("%s: type %d, vaddr  0x%p\n",
@@ -682,6 +696,8 @@ static int __msm_pmem_table_del(struct msm_sync *sync,
 				hlist_del(node);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_free(client_for_ion, region->handle);
+#else
+				put_pmem_file(region->file);
 #endif
 				kfree(region);
 				CDBG("%s: type %d, vaddr  0x%p\n",
@@ -1221,7 +1237,7 @@ static int msm_get_stats(struct msm_sync *sync, void __user *arg)
 	}
 
 	rc = 0;
-        memset(&stats, 0, sizeof(stats));
+
 	qcmd = msm_dequeue(&sync->event_q, list_config);
 	if (!qcmd) {
 		/* Should be associated with wait_event
@@ -1552,6 +1568,13 @@ static int msm_ctrl_cmd_done(struct msm_control_device *ctrl_pmsm,
 	qcmd->command = command;
 	uptr = command->value;
 
+	if (command->queue_idx < 0 ||
+			command->queue_idx >= MAX_NUM_ACTIVE_CAMERA) {
+		pr_err("%s: Invalid value OR index %d\n", __func__,
+			command->queue_idx);
+		return -EINVAL;
+	}
+
 	if (command->length > 0) {
 		command->value = ctrl_pmsm->ctrl_data;
 		if (command->length > sizeof(ctrl_pmsm->ctrl_data)) {
@@ -1562,7 +1585,7 @@ static int msm_ctrl_cmd_done(struct msm_control_device *ctrl_pmsm,
 		}
 
 		if (copy_from_user(command->value,
-					uptr,
+					(void __user *)uptr,
 					command->length)) {
 			ERR_COPY_FROM_USER();
 			return -EFAULT;
@@ -2469,7 +2492,6 @@ static int msm_set_crop(struct msm_sync *sync, void __user *arg)
 		ERR_COPY_FROM_USER();
 		sync->croplen = 0;
 		kfree(sync->cropinfo);
-		sync->cropinfo = NULL;
 		mutex_unlock(&sync->lock);
 		return -EFAULT;
 	}
@@ -3053,6 +3075,8 @@ static int __msm_release(struct msm_sync *sync)
 			hlist_del(hnode);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_free(client_for_ion, region->handle);
+#else
+			put_pmem_file(region->file);
 #endif
 			kfree(region);
 		}
@@ -3062,6 +3086,8 @@ static int __msm_release(struct msm_sync *sync)
 			hlist_del(hnode);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_free(client_for_ion, region->handle);
+#else
+			put_pmem_file(region->file);
 #endif
 			kfree(region);
 		}

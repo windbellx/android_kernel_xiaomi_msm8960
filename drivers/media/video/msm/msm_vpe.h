@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -65,7 +65,6 @@
 
 #define VPE_SCALE_COEFF_LSBn(n)	(0x50400 + 8 * (n))
 #define VPE_SCALE_COEFF_MSBn(n)	(0x50404 + 8 * (n))
-#define VPE_SCALE_COEFF_MAX_N		127
 #define VPE_SCALE_COEFF_NUM			32
 
 /*********** end of register offset ********************/
@@ -80,8 +79,8 @@
 #define VPE_DEFAULT_SCALE_CONFIG      0x3c
 
 #define VPE_NORMAL_MODE_CLOCK_RATE   150000000
-#define VPE_TURBO_MODE_CLOCK_RATE    200000000
-#define VPE_SUBDEV_MAX_EVENTS        30
+#define VPE_TURBO_MODE_CLOCK_RATE   200000000
+
 
 /**************************************************/
 /*********** End of command id ********************/
@@ -120,10 +119,6 @@ struct vpe_ctrl_type {
 	struct regulator *fs_vpe;
 	struct clk	*vpe_clk[2];
 	struct msm_mctl_pp_frame_info *pp_frame_info;
-	atomic_t active;
-	struct msm_device_queue eventData_q; /*V4L2 Event Payload Queue*/
-	struct device *iommu_ctx_src;
-	struct device *iommu_ctx_dst;
 };
 
 /*
@@ -182,6 +177,15 @@ struct phase_val_t {
 	int32_t phase_step_x;
 	int32_t phase_step_y;
 };
+
+#define VIDIOC_MSM_VPE_INIT \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 15, struct msm_cam_media_controller *)
+
+#define VIDIOC_MSM_VPE_RELEASE \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 16, struct msm_cam_media_controller *)
+
+#define VIDIOC_MSM_VPE_CFG \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 17, struct msm_mctl_pp_params *)
 
 #endif /*_MSM_VPE_H_*/
 

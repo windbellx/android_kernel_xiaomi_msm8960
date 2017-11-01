@@ -1451,12 +1451,35 @@ static struct msm_sensor_output_info_t imx135_dimensions[] = {
 	},
 };
 
-// static enum msm_camera_vreg_name_t imx135_veg_seq[] = {
-// 	CAM_VIO,
-// 	CAM_VANA,
-// 	CAM_VAF,
-// 	CAM_VDIG,
-// };
+static struct msm_camera_csid_vc_cfg imx135_cid_cfg[] = {
+	{0, CSI_RAW10, CSI_DECODE_10BIT},
+	{1, 0x35,      CSI_DECODE_10BIT},
+	{2, CSI_EMBED_DATA, CSI_DECODE_8BIT},
+};
+
+static struct msm_camera_csi2_params imx135_csi_params = {
+	.csid_params = {
+		.lane_assign = 0xe4,
+		.lane_cnt = 4,
+		.lut_params = {
+			.num_cid = ARRAY_SIZE(imx135_cid_cfg),
+			.vc_cfg = imx135_cid_cfg,
+		},
+	},
+	.csiphy_params = {
+		.lane_cnt = 4,
+		.settle_cnt = 0x12,
+	},
+};
+
+static struct msm_camera_csi2_params *imx135_csi_params_array[] = {
+	&imx135_csi_params,
+	&imx135_csi_params,
+	&imx135_csi_params,
+	&imx135_csi_params,
+	&imx135_csi_params,
+	&imx135_csi_params,
+};
 
 static struct msm_sensor_output_reg_addr_t imx135_reg_addr = {
 	.x_output = 0x34C,
@@ -1567,9 +1590,9 @@ static int32_t imx135_match_id(struct msm_sensor_ctrl_t *s_ctrl) {
 			break;
 		}
 	}
-	s_ctrl->msm_sensor_reg->sensor_wb_calib.r_over_g = r_over_g;
-	s_ctrl->msm_sensor_reg->sensor_wb_calib.b_over_g = b_over_g;
-	s_ctrl->msm_sensor_reg->sensor_wb_calib.gr_over_gb = b_over_r;
+	// s_ctrl->msm_sensor_reg->sensor_wb_calib.r_over_g = r_over_g;
+	// s_ctrl->msm_sensor_reg->sensor_wb_calib.b_over_g = b_over_g;
+	// s_ctrl->msm_sensor_reg->sensor_wb_calib.gr_over_gb = b_over_r;
 	otp_readed = 1;
 
 #if 0
@@ -1872,8 +1895,8 @@ static struct msm_sensor_fn_t imx135_func_tbl = {
 	.sensor_set_fps = msm_sensor_set_fps,
 	.sensor_write_exp_gain = imx135_write_exp_gain,
 	.sensor_write_snapshot_exp_gain = imx135_write_exp_gain,
-	.sensor_write_exp_gain_hdr = imx135_write_exp_gain_hdr,
-	.sensor_write_snapshot_exp_gain_hdr = imx135_write_exp_gain_hdr,
+	// .sensor_write_exp_gain_hdr = imx135_write_exp_gain_hdr,
+	// .sensor_write_snapshot_exp_gain_hdr = imx135_write_exp_gain_hdr,
 	.sensor_setting = msm_sensor_setting,
 	.sensor_set_sensor_mode = msm_sensor_set_sensor_mode,
 	.sensor_mode_init = msm_sensor_mode_init,
@@ -1883,7 +1906,7 @@ static struct msm_sensor_fn_t imx135_func_tbl = {
 	.sensor_power_down = msm_sensor_power_down,
 //	.sensor_adjust_frame_lines = msm_sensor_adjust_frame_lines1,
 	.sensor_get_csi_params = msm_sensor_get_csi_params,
-	.sensor_hdr_update = imx135_hdr_update,     /* For Video HDR */
+	// .sensor_hdr_update = imx135_hdr_update,     /* For Video HDR */
 	.sensor_match_id   = imx135_match_id,
 };
 
@@ -1913,6 +1936,7 @@ static struct msm_sensor_ctrl_t imx135_s_ctrl = {
 	.sensor_id_info = &imx135_id_info,
 	.sensor_exp_gain_info = &imx135_exp_gain_info,
 	.cam_mode = MSM_SENSOR_MODE_INVALID,
+	.csi_params = &imx135_csi_params_array[0],
 	.msm_sensor_mutex = &imx135_mut,
 	.sensor_i2c_driver = &imx135_i2c_driver,
 	.sensor_v4l2_subdev_info = imx135_subdev_info,

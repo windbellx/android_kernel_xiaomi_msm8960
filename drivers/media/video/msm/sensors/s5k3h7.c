@@ -2148,11 +2148,50 @@ static struct msm_sensor_output_info_t s5k3h7_dimensions[] = {
         },
 };
 
-static enum msm_camera_vreg_name_t s5k3h7_veg_seq[] = {
-	CAM_VDIG,
-	CAM_VANA,
-	CAM_VIO,
-	CAM_VAF,
+static struct msm_camera_csi_params s5k3h7_csic_params = {
+        .data_format = CSI_10BIT,
+        .lane_cnt    = 4,
+        .lane_assign = 0xe4,
+        .dpcm_scheme = 0,
+        .settle_cnt  = 0x14,
+};
+
+static struct msm_camera_csi_params *s5k3h7_csic_params_array[] = {
+        &s5k3h7_csic_params,
+        &s5k3h7_csic_params,
+        &s5k3h7_csic_params,
+        &s5k3h7_csic_params,
+        &s5k3h7_csic_params,
+        &s5k3h7_csic_params,
+};
+
+
+static struct msm_camera_csid_vc_cfg s5k3h7_cid_cfg[] = {
+	{0, CSI_RAW10, CSI_DECODE_10BIT},
+        {1, CSI_EMBED_DATA, CSI_DECODE_8BIT},
+};
+
+static struct msm_camera_csi2_params s5k3h7_csi_params = {
+	.csid_params = {
+		.lane_cnt = 4,
+		.lut_params = {
+			.num_cid = ARRAY_SIZE(s5k3h7_cid_cfg),
+			.vc_cfg = s5k3h7_cid_cfg,
+		},
+	},
+	.csiphy_params = {
+		.lane_cnt = 4,
+		.settle_cnt = 0x14,
+	},
+};
+
+static struct msm_camera_csi2_params *s5k3h7_csi_params_array[] = {
+	&s5k3h7_csi_params,
+	&s5k3h7_csi_params,
+	&s5k3h7_csi_params,
+	&s5k3h7_csi_params,
+	&s5k3h7_csi_params,
+	&s5k3h7_csi_params,
 };
 
 static struct msm_sensor_output_reg_addr_t s5k3h7_reg_addr = {
@@ -2407,12 +2446,12 @@ static struct msm_sensor_ctrl_t s5k3h7_s_ctrl = {
 	.msm_sensor_reg = &s5k3h7_regs,
 	.sensor_i2c_client = &s5k3h7_sensor_i2c_client,
 	.sensor_i2c_addr = 0x20,
-	.vreg_seq = s5k3h7_veg_seq,
-	.num_vreg_seq = ARRAY_SIZE(s5k3h7_veg_seq),
 	.sensor_output_reg_addr = &s5k3h7_reg_addr,
 	.sensor_id_info = &s5k3h7_id_info,
 	.sensor_exp_gain_info = &s5k3h7_exp_gain_info,
 	.cam_mode = MSM_SENSOR_MODE_INVALID,
+        .csic_params = &s5k3h7_csic_params_array[0],
+	.csi_params = &s5k3h7_csi_params_array[0],
 	.msm_sensor_mutex = &s5k3h7_mut,
 	.sensor_i2c_driver = &s5k3h7_i2c_driver,
 	.sensor_v4l2_subdev_info = s5k3h7_subdev_info,

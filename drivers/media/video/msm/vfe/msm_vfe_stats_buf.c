@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,7 +25,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-device.h>
 
-
+#include <linux/android_pmem.h>
 #include <media/msm_camera.h>
 #include <media/msm_isp.h>
 #include "msm.h"
@@ -119,6 +119,7 @@ static int msm_stats_reqbuf(struct msm_stats_bufq_ctrl *stats_ctrl,
 		} else {
 			/* good case. need to de-reqbuf */
 			kfree(stats_ctrl->bufq[idx]->bufs);
+			stats_ctrl->bufq[idx]->bufs = NULL;
 			kfree(stats_ctrl->bufq[idx]);
 			stats_ctrl->bufq[idx] = NULL;
 			goto end;
@@ -162,9 +163,27 @@ static int msm_stats_deinit(struct msm_stats_bufq_ctrl *stats_ctrl)
 	return rc;
 }
 
+#ifdef CONFIG_ANDROID_PMEM
+static int msm_stats_check_pmem_info(struct msm_stats_buf_info *info, int len)
+{
+	if (info->offset < len &&
+		info->offset + info->len <= len &&
+		info->planar0_off < len && info->planar1_off < len)
+		return 0;
+
+	pr_err("%s: check failed: off %d len %d y %d cbcr %d (total len %d)\n",
+		   __func__,
+		   info->offset,
+		   info->len,
+		   info->planar0_off,
+		   info->planar1_off,
+		   len);
+	return -EINVAL;
+}
+#endif
+
 static int msm_stats_buf_prepare(struct msm_stats_bufq_ctrl *stats_ctrl,
-	struct msm_stats_buf_info *info, struct ion_client *client,
-	int domain_num)
+	struct msm_stats_buf_info *info, struct ion_client *client)
 {
 	unsigned long paddr;
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -179,15 +198,7 @@ static int msm_stats_buf_prepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 	D("%s: type : %d, buf num : %d\n", __func__,
 		info->type, info->buf_idx);
 
-	if (stats_ctrl)
-		bufq = stats_ctrl->bufq[info->type];
-	if(!bufq) {
-		pr_err("%s:%d bufq is NULL stats_ctrl :%x\n", __func__, __LINE__,
-				(unsigned int)stats_ctrl);
-		rc = -1;
-		goto out1;
-	}
-
+	bufq = stats_ctrl->bufq[info->type];
 	stats_buf = &bufq->bufs[info->buf_idx];
 	if (stats_buf->state == MSM_STATS_BUFFER_STATE_UNUSED) {
 		pr_err("%s: need reqbuf first, stats type = %d",
@@ -209,12 +220,20 @@ static int msm_stats_buf_prepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 		goto out1;
 	}
 	if (ion_map_iommu(client, stats_buf->handle,
-			domain_num, 0, SZ_4K,
+			CAMERA_DOMAIN, GEN_POOL, SZ_4K,
 			0, &paddr, &len, 0, 0) < 0) {
 		rc = -EINVAL;
 		pr_err("%s: cannot map address", __func__);
 		goto out2;
 	}
+#elif CONFIG_ANDROID_PMEM
+	rc = get_pmem_file(info->fd, &paddr, &kvstart, &len, &file);
+	if (rc < 0) {
+		pr_err("%s: get_pmem_file fd %d error %d\n",
+			   __func__, info->fd, rc);
+		goto out1;
+	}
+	stats_buf->file = file;
 #else
 	paddr = 0;
 	file = NULL;
@@ -222,6 +241,11 @@ static int msm_stats_buf_prepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 #endif
 	if (!info->len)
 		info->len = len;
+	rc = msm_stats_check_pmem_info(info, len);
+	if (rc < 0) {
+		pr_err("%s: msm_stats_check_pmem_info err = %d", __func__, rc);
+		goto out3;
+	}
 	paddr += info->offset;
 	len = info->len;
 	stats_buf->paddr = paddr;
@@ -232,34 +256,29 @@ static int msm_stats_buf_prepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 	D("%s pmem_stats address is 0x%ld\n", __func__, paddr);
 	stats_buf->state = MSM_STATS_BUFFER_STATE_PREPARED;
 	return 0;
+out3:
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	ion_unmap_iommu(client, stats_buf->handle, domain_num, 0);
+	ion_unmap_iommu(client, stats_buf->handle, CAMERA_DOMAIN, GEN_POOL);
 #endif
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 out2:
 	ion_free(client, stats_buf->handle);
+#elif CONFIG_ANDROID_PMEM
+	put_pmem_file(stats_buf->file);
 #endif
 out1:
 	return rc;
 }
 static int msm_stats_buf_unprepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 	enum msm_stats_enum_type stats_type, int buf_idx,
-	struct ion_client *client, int domain_num)
+	struct ion_client *client)
 {
 	int rc = 0;
 	struct msm_stats_bufq *bufq = NULL;
 	struct msm_stats_meta_buf *stats_buf = NULL;
 
 	D("%s: type : %d, idx : %d\n", __func__, stats_type, buf_idx);
-	if(stats_ctrl)
-		bufq = stats_ctrl->bufq[stats_type];
-	if(bufq == NULL) {
-		pr_err("%s: bufq is NULL for stats type %d",
-			__func__, stats_type);
-		rc = -1;
-		goto end;
-	}
-
+	bufq = stats_ctrl->bufq[stats_type];
 	stats_buf = &bufq->bufs[buf_idx];
 	if (stats_buf->state == MSM_STATS_BUFFER_STATE_UNUSED) {
 		pr_err("%s: need reqbuf first, stats type = %d",
@@ -274,8 +293,10 @@ static int msm_stats_buf_unprepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 	}
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	ion_unmap_iommu(client, stats_buf->handle,
-					domain_num, 0);
+					CAMERA_DOMAIN, GEN_POOL);
 	ion_free(client, stats_buf->handle);
+#else
+	put_pmem_file(stats_buf->file);
 #endif
 	if (stats_buf->state == MSM_STATS_BUFFER_STATE_QUEUED) {
 		/* buf queued need delete from list */
@@ -295,14 +316,8 @@ static int msm_stats_bufq_flush(struct msm_stats_bufq_ctrl *stats_ctrl,
 	struct msm_stats_bufq *bufq = NULL;
 	struct msm_stats_meta_buf *stats_buf = NULL;
 
-	if(stats_ctrl)
-		bufq = stats_ctrl->bufq[stats_type];
-	if(!bufq) {
-		pr_err("%s:%d bufq is NULL stats_ctrl :%x\n", __func__, __LINE__,
-			(unsigned int)stats_ctrl);
-		rc = -1;
-		return rc;
-	}
+	D("%s: type : %d\n", __func__, stats_type);
+	bufq = stats_ctrl->bufq[stats_type];
 
 	for (i = 0; i < bufq->num_bufs; i++) {
 		stats_buf = &bufq->bufs[i];
@@ -337,19 +352,9 @@ static int msm_stats_dqbuf(struct msm_stats_bufq_ctrl *stats_ctrl,
 
 	D("%s: type : %d\n", __func__, stats_type);
 	*pp_stats_buf = NULL;
-	if(stats_ctrl)
-		bufq = stats_ctrl->bufq[stats_type];
-	if(!bufq) {
-		pr_err("%s:%d bufq is NULL stats_ctrl :%x\n", __func__, __LINE__,
-			(unsigned int)stats_ctrl);
-		rc = -1;
-		return rc;
-	}
 	bufq = stats_ctrl->bufq[stats_type];
 
 	list_for_each_entry(stats_buf, &bufq->head, list) {
-		if(!stats_buf)
-			return -1;
 		if (stats_buf->state == MSM_STATS_BUFFER_STATE_QUEUED) {
 			/* found one buf */
 			list_del_init(&stats_buf->list);
@@ -378,14 +383,6 @@ static int msm_stats_querybuf(struct msm_stats_bufq_ctrl *stats_ctrl,
 	*pp_stats_buf = NULL;
 	D("%s: stats type : %d, buf_idx : %d", __func__, info->type,
 		   info->buf_idx);
-	if(stats_ctrl)
-		bufq = stats_ctrl->bufq[info->type];
-	if(!bufq) {
-		pr_err("%s:%d bufq is NULL stats_ctrl :%x\n", __func__, __LINE__,
-			(unsigned int)stats_ctrl);
-		rc = -1;
-		return rc;
-	}
 	bufq = stats_ctrl->bufq[info->type];
 	*pp_stats_buf = &bufq->bufs[info->buf_idx];
 
@@ -402,8 +399,7 @@ static int msm_stats_qbuf(struct msm_stats_bufq_ctrl *stats_ctrl,
 	D("%s: stats type : %d, buf_idx : %d", __func__, stats_type,
 		   buf_idx);
 
-	if(stats_ctrl)
-		bufq = stats_ctrl->bufq[stats_type];
+	bufq = stats_ctrl->bufq[stats_type];
 	if (!bufq) {
 		pr_err("%s: null bufq, stats type = %d", __func__, stats_type);
 		rc = -1;
@@ -448,15 +444,6 @@ static int msm_stats_buf_dispatch(struct msm_stats_bufq_ctrl *stats_ctrl,
 	*buf_idx = -1;
 	*vaddr = NULL;
 	*fd = 0;
-	if(stats_ctrl)
-	 	bufq = stats_ctrl->bufq[stats_type];
-	if(!bufq) {
-		pr_err("%s:%d bufq is NULL stats_ctrl :%x\n", __func__, __LINE__,
-			(unsigned int)stats_ctrl);
-		rc = -1;
-		return rc;
-	}
-
 	bufq = stats_ctrl->bufq[stats_type];
 	for (i = 0; i < bufq->num_bufs; i++) {
 		if (bufq->bufs[i].paddr == phy_addr) {
@@ -486,13 +473,12 @@ static int msm_stats_buf_dispatch(struct msm_stats_bufq_ctrl *stats_ctrl,
 	return rc;
 }
 static int msm_stats_enqueue_buf(struct msm_stats_bufq_ctrl *stats_ctrl,
-	struct msm_stats_buf_info *info, struct ion_client *client,
-	int domain_num)
+	struct msm_stats_buf_info *info, struct ion_client *client)
 {
 	int rc = 0;
 	D("%s: stats type : %d, idx : %d\n", __func__,
 		info->type, info->buf_idx);
-	rc = msm_stats_buf_prepare(stats_ctrl, info, client, domain_num);
+	rc = msm_stats_buf_prepare(stats_ctrl, info, client);
 	if (rc < 0) {
 		pr_err("%s: buf_prepare failed, rc = %d", __func__, rc);
 		return -EINVAL;
