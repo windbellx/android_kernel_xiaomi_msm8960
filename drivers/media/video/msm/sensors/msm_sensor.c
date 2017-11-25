@@ -252,10 +252,19 @@ int32_t msm_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 	if (update_type == MSM_SENSOR_REG_INIT) {
 		s_ctrl->curr_csi_params = NULL;
 		msm_sensor_enable_debugfs(s_ctrl);
-		msm_sensor_write_init_settings(s_ctrl);
+		if(s_ctrl->func_tbl->sensor_write_init_settings)
+			s_ctrl->func_tbl->sensor_write_init_settings(s_ctrl);
+		else
+			msm_sensor_write_init_settings(s_ctrl);
 
 	} else if (update_type == MSM_SENSOR_UPDATE_PERIODIC) {
-		msm_sensor_write_res_settings(s_ctrl, res);
+
+		pr_info("%s res:%d", __func__, res);
+
+		if(s_ctrl->func_tbl->sensor_write_res_settings)
+			s_ctrl->func_tbl->sensor_write_res_settings(s_ctrl, res);
+		else
+			msm_sensor_write_res_settings(s_ctrl, res);
 
 		if (s_ctrl->curr_csi_params != s_ctrl->csi_params[res]) {
 			s_ctrl->curr_csi_params = s_ctrl->csi_params[res];
@@ -289,6 +298,11 @@ int32_t msm_sensor_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl,
 	int mode, int res)
 {
 	int32_t rc = 0;
+
+	pr_info("%s res:%d cur:%d mode:%d", __func__, res, s_ctrl->curr_res, mode);
+	/* Switching between fullsize preview and snapshot */
+	if ( ((s_ctrl->curr_res == 0) && (res == 1)) || ((s_ctrl->curr_res == 1) && (res == 0)))
+		return rc;
 
 	if (s_ctrl->curr_res != res) {
 		s_ctrl->curr_frame_length_lines =
@@ -341,6 +355,10 @@ int32_t msm_sensor_get_output_info(struct msm_sensor_ctrl_t *s_ctrl,
 		struct sensor_output_info_t *sensor_output_info)
 {
 	int rc = 0;
+	sensor_output_info->num_info = s_ctrl->msm_sensor_reg->num_conf;
+	sensor_output_info->wb_calib.r_over_g = s_ctrl->msm_sensor_reg->sensor_wb_calib.r_over_g;
+	sensor_output_info->wb_calib.b_over_g = s_ctrl->msm_sensor_reg->sensor_wb_calib.b_over_g;
+	sensor_output_info->wb_calib.gr_over_gb = s_ctrl->msm_sensor_reg->sensor_wb_calib.gr_over_gb;
 	if (copy_to_user((void *)sensor_output_info->output_info,
 		s_ctrl->msm_sensor_reg->output_settings,
 		sizeof(struct msm_sensor_output_info_t) *
@@ -435,13 +453,35 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				rc = -EFAULT;
 				break;
 			}
-			rc = s_ctrl->func_tbl->
-				sensor_write_exp_gain(
-				s_ctrl,
-				cdata.cfg.exp_gain.gain,
-				cdata.cfg.exp_gain.line);
-			s_ctrl->prev_gain = cdata.cfg.exp_gain.gain;
-			s_ctrl->prev_line = cdata.cfg.exp_gain.line;
+			if (s_ctrl->func_tbl->
+				sensor_write_exp_gain_hdr == NULL) {
+				rc = s_ctrl->func_tbl->
+					sensor_write_exp_gain(
+					s_ctrl,
+					cdata.cfg.exp_gain.gain,
+					cdata.cfg.exp_gain.line);
+				s_ctrl->prev_gain = cdata.cfg.exp_gain.gain;
+				s_ctrl->prev_line = cdata.cfg.exp_gain.line;
+			} else {
+				if(s_ctrl->curr_res == 2) { /* VideoHDR */
+					rc = s_ctrl->func_tbl->
+						sensor_write_exp_gain_hdr(
+								s_ctrl,
+								cdata.cfg.exp_gain.gain,
+								cdata.cfg.exp_gain.line,
+								cdata.cfg.exp_gain.luma_avg,
+								cdata.cfg.exp_gain.fgain);
+				} else {
+					rc = s_ctrl->func_tbl->
+						sensor_write_exp_gain(
+								s_ctrl,
+								cdata.cfg.exp_gain.gain,
+								cdata.cfg.exp_gain.line);
+
+				}
+				s_ctrl->prev_gain = cdata.cfg.exp_gain.gain;
+				s_ctrl->prev_line = cdata.cfg.exp_gain.line;
+			}
 			break;
 
 		case CFG_SET_PICT_EXP_GAIN:
@@ -451,11 +491,31 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				break;
 			}
 
-			rc =	s_ctrl->func_tbl->
-				sensor_write_snapshot_exp_gain(
-					s_ctrl,
-					cdata.cfg.exp_gain.gain,
-					cdata.cfg.exp_gain.line);
+			if (s_ctrl->func_tbl->
+			sensor_write_snapshot_exp_gain_hdr == NULL) {
+
+				rc =	s_ctrl->func_tbl->
+					sensor_write_snapshot_exp_gain(
+						s_ctrl,
+						cdata.cfg.exp_gain.gain,
+						cdata.cfg.exp_gain.line);
+			} else {
+				if(s_ctrl->curr_res == 2) {
+					rc = s_ctrl->func_tbl->
+						sensor_write_snapshot_exp_gain_hdr(
+							s_ctrl,
+							cdata.cfg.exp_gain.gain,
+							cdata.cfg.exp_gain.line,
+							cdata.cfg.exp_gain.luma_avg,
+							cdata.cfg.exp_gain.fgain);
+				} else {
+					rc = s_ctrl->func_tbl->
+						sensor_write_snapshot_exp_gain(
+								s_ctrl,
+								cdata.cfg.exp_gain.gain,
+								cdata.cfg.exp_gain.line);
+				}
+			}
 			break;
 
 		case CFG_SET_MODE:
@@ -473,7 +533,17 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 
 		case CFG_SET_EFFECT:
 			break;
-
+		case CFG_HDR_UPDATE:	/* For Video HDR */
+			if (s_ctrl->func_tbl->
+			sensor_hdr_update == NULL) {
+				rc = -EFAULT;
+				break;
+			}
+			rc = s_ctrl->func_tbl->
+					sensor_hdr_update(
+					s_ctrl,
+					&(cdata.cfg.hdr_update_parm));
+			break;
 		case CFG_SENSOR_INIT:
 			if (s_ctrl->func_tbl->
 			sensor_mode_init == NULL) {
