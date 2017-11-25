@@ -1426,8 +1426,8 @@ static struct msm_sensor_fn_t ov2720_func_tbl = {
 //	.sensor_adjust_frame_lines = msm_sensor_adjust_frame_lines,
 	.sensor_get_csi_params = msm_sensor_get_csi_params,
 	.sensor_match_id = ov2720_match_id,
-	// .sensor_write_init_settings = ov2720_write_init_settings,
-	// .sensor_write_res_settings = ov2720_write_res_settings,
+	.sensor_write_init_settings = ov2720_write_init_settings,
+	.sensor_write_res_settings = ov2720_write_res_settings,
 };
 
 static struct msm_sensor_reg_t ov2720_regs = {

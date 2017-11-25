@@ -1590,9 +1590,9 @@ static int32_t imx135_match_id(struct msm_sensor_ctrl_t *s_ctrl) {
 			break;
 		}
 	}
-	// s_ctrl->msm_sensor_reg->sensor_wb_calib.r_over_g = r_over_g;
-	// s_ctrl->msm_sensor_reg->sensor_wb_calib.b_over_g = b_over_g;
-	// s_ctrl->msm_sensor_reg->sensor_wb_calib.gr_over_gb = b_over_r;
+	s_ctrl->msm_sensor_reg->sensor_wb_calib.r_over_g = r_over_g;
+	s_ctrl->msm_sensor_reg->sensor_wb_calib.b_over_g = b_over_g;
+	s_ctrl->msm_sensor_reg->sensor_wb_calib.gr_over_gb = b_over_r;
 	otp_readed = 1;
 
 #if 0
@@ -1895,8 +1895,8 @@ static struct msm_sensor_fn_t imx135_func_tbl = {
 	.sensor_set_fps = msm_sensor_set_fps,
 	.sensor_write_exp_gain = imx135_write_exp_gain,
 	.sensor_write_snapshot_exp_gain = imx135_write_exp_gain,
-	// .sensor_write_exp_gain_hdr = imx135_write_exp_gain_hdr,
-	// .sensor_write_snapshot_exp_gain_hdr = imx135_write_exp_gain_hdr,
+	.sensor_write_exp_gain_hdr = imx135_write_exp_gain_hdr,
+	.sensor_write_snapshot_exp_gain_hdr = imx135_write_exp_gain_hdr,
 	.sensor_setting = msm_sensor_setting,
 	.sensor_set_sensor_mode = msm_sensor_set_sensor_mode,
 	.sensor_mode_init = msm_sensor_mode_init,
@@ -1906,7 +1906,7 @@ static struct msm_sensor_fn_t imx135_func_tbl = {
 	.sensor_power_down = msm_sensor_power_down,
 //	.sensor_adjust_frame_lines = msm_sensor_adjust_frame_lines1,
 	.sensor_get_csi_params = msm_sensor_get_csi_params,
-	// .sensor_hdr_update = imx135_hdr_update,     /* For Video HDR */
+	.sensor_hdr_update = imx135_hdr_update,     /* For Video HDR */
 	.sensor_match_id   = imx135_match_id,
 };
 

@@ -762,6 +762,7 @@ static void vfe32_start_common(void)
 		msm_camera_io_w_mb(reg_update|0x1, vfe32_ctrl->vfebase +
 			VFE_REG_UPDATE_CMD);
 		msm_camera_io_w_mb(1, vfe32_ctrl->vfebase + VFE_CAMIF_COMMAND);
+		msm_camera_io_w_mb(VFE_AXI_CFG_MASK, vfe32_ctrl->vfebase + VFE_AXI_CFG);
 	}
 	/* Ensure the write order while writing
 	to the command register using the barrier */
@@ -1047,7 +1048,7 @@ static int vfe32_start(struct msm_cam_media_controller *pmctl)
 	}
 
 	if (vfe32_ctrl->operation_mode & VFE_OUTPUTS_RDI0)
-		msm_camera_io_w(1, vfe32_ctrl->vfebase +
+		msm_camera_io_w(3, vfe32_ctrl->vfebase +
 		vfe32_AXI_WM_CFG[vfe32_ctrl->outpath.out2.ch0]);
 	if (vfe32_ctrl->operation_mode & VFE_OUTPUTS_RDI1)
 		msm_camera_io_w(1, vfe32_ctrl->vfebase +

@@ -879,7 +879,8 @@ struct msm_snapshot_pp_status {
 #define CFG_START_STREAM              44
 #define CFG_STOP_STREAM               45
 #define CFG_GET_CSI_PARAMS            46
-#define CFG_MAX			47
+#define CFG_HDR_UPDATE                47
+#define CFG_MAX			48
 
 
 #define MOVE_NEAR	0
@@ -1097,6 +1098,21 @@ struct sensor_pict_fps {
 struct exp_gain_cfg {
 	uint16_t gain;
 	uint32_t line;
+        int32_t luma_avg;
+        uint16_t fgain;
+};
+
+enum sensor_hdr_update_t
+{
+       SENSOR_HDR_UPDATE_AWB,
+       SENSOR_HDR_UPDATE_LSC,
+};
+
+struct sensor_hdr_update_parm_t
+{
+       enum sensor_hdr_update_t type;
+       uint16_t awb_gain_r, awb_gain_b;
+       uint8_t lsc_table[504];
 };
 
 struct focus_cfg {
@@ -1192,6 +1208,7 @@ struct msm_sensor_output_info_t {
 struct sensor_output_info_t {
 	struct msm_sensor_output_info_t *output_info;
 	uint16_t num_info;
+	struct sensor_calib_data wb_calib;
 };
 
 struct mirror_flip {
@@ -1343,6 +1360,7 @@ struct sensor_cfg_data {
 		struct sensor_output_info_t output_info;
 		struct msm_eeprom_data_t eeprom_data;
 		struct csi_lane_params_t csi_lane_params;
+		struct sensor_hdr_update_parm_t hdr_update_parm;
 		/* QRD */
 		uint16_t antibanding;
 		uint8_t contrast;
