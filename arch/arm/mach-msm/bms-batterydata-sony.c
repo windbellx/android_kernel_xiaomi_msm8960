@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/mfd/pm8xxx/batterydata-lib.h>
+#include <linux/mfd/pm8xxx/pm8921-bms.h>
 
 static struct single_row_lut fcc_temp = {
 	.x		= {-20, 0, 25, 40, 60},
@@ -112,7 +112,7 @@ static struct sf_lut pc_sf = {
 	},
 };
 
-struct bms_battery_data sony_1900_data = {
+struct pm8921_bms_battery_data sony_1900_data = {
 	.fcc			= 1900,
 	.fcc_temp_lut		= &fcc_temp,
 	.fcc_sf_lut		= &fcc_sf,
@@ -120,5 +120,4 @@ struct bms_battery_data sony_1900_data = {
 	.pc_sf_lut		= &pc_sf,
 	.rbatt_sf_lut		= &rbatt_sf,
 	.default_rbatt_mohm	=159,
-	.rbatt_capacitive_mohm	= 50,
 };
