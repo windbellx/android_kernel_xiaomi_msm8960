@@ -9,7 +9,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include <linux/mfd/pm8xxx/pm8921-bms.h>
+#include <linux/mfd/pm8xxx/batterydata-lib.h>
 
 static struct single_row_lut fcc_temp = {
 	.x	= {-20, -10, 0, 5, 10, 15, 20, 25, 30, 40, 60},
@@ -99,11 +99,12 @@ static struct pc_temp_ocv_lut pc_temp_ocv = {
 	}
 };
 
-struct pm8921_bms_battery_data  samsung_3000_data = {
+struct bms_battery_data  samsung_3000_data = {
 	.fcc			= 3210,
 	.fcc_temp_lut		= &fcc_temp,
 	.fcc_sf_lut		= &fcc_sf,
 	.pc_temp_ocv_lut	= &pc_temp_ocv,
 	.rbatt_sf_lut		= &rbatt_sf,
 	.default_rbatt_mohm	= 130,
+	.rbatt_capacitive_mohm	= 50,
 };
