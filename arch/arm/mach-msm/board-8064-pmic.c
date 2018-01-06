@@ -601,7 +601,7 @@ apq8064_pm8921_chg_pdata __devinitdata = {
 static struct pm8xxx_ccadc_platform_data
 apq8064_pm8xxx_ccadc_pdata = {
 #ifdef CONFIG_MACH_MITWO
-	.r_sense_uohm		= 10000,
+	.r_sense		= 10,
 #else
 	.r_sense_uohm		= 10000,
 #endif
