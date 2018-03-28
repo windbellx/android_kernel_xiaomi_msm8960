@@ -154,9 +154,6 @@ static int msm_pmem_table_add(struct hlist_head *ptype,
 #endif
 	if (!info->len)
 		info->len = len;
-	rc = check_pmem_info(info, len);
-	if (rc < 0)
-		goto out3;
 	paddr += info->offset;
 	len = info->len;
 

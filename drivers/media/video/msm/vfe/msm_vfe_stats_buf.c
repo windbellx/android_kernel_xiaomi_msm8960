@@ -241,11 +241,6 @@ static int msm_stats_buf_prepare(struct msm_stats_bufq_ctrl *stats_ctrl,
 #endif
 	if (!info->len)
 		info->len = len;
-	rc = msm_stats_check_pmem_info(info, len);
-	if (rc < 0) {
-		pr_err("%s: msm_stats_check_pmem_info err = %d", __func__, rc);
-		goto out3;
-	}
 	paddr += info->offset;
 	len = info->len;
 	stats_buf->paddr = paddr;
