@@ -434,7 +434,7 @@ static ssize_t msm_fb_set_dispparam(struct device *dev,
 
 	sscanf(buf, "%u", &param);
 
-	if (!mfd->panel_power_on)
+	if (mdp_fb_is_power_off(mfd))
 		return size;
 
 	pdata->set_dispparam(param);
