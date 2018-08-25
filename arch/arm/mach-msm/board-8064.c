@@ -374,10 +374,15 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 }
 
 /**
- * Reserve memory for ION. Also handle special case
+ * Reserve memory for ION and calculate amount of reusable memory for fmem.
+ * We only reserve memory for heaps that are not reusable. However, we only
+ * support one reusable heap at the moment so we ignore the reusable flag for
+ * other than the first heap with reusable flag set. Also handle special case
  * for video heaps (MM,FW, and MFC). Video requires heaps MM and MFC to be
  * at a higher address than FW in addition to not more than 256MB away from the
- * base address of the firmware. In addition the MM heap must be
+ * base address of the firmware. This means that if MM is reusable the other
+ * two heaps must be allocated in the same region as FW. This is handled by the
+ * mem_is_fmem flag in the platform data. In addition the MM heap must be
  * adjacent to the FW heap for content protection purposes.
  */
 static void __init reserve_ion_memory(void)
@@ -3562,6 +3567,7 @@ static struct platform_device gpio_ir_recv_pdev = {
 static struct platform_device *common_not_mpq_devices[] __initdata = {
 	&apq8064_device_qup_i2c_gsbi1,
 	&apq8064_device_qup_i2c_gsbi3,
+	// &apq8064_device_qup_i2c_gsbi4,
 #ifdef CONFIG_MACH_MITWO
 	&mpq8064_device_qup_i2c_gsbi5,
 #endif
@@ -3709,8 +3715,10 @@ static struct platform_device *common_devices[] __initdata = {
 
 static struct platform_device *cdp_devices[] __initdata = {
 	&apq8064_device_uart_gsbi1,
+#ifdef CONFIG_MACH_MITWO
 #ifdef CONFIG_AUDIENCE_ES310_US
 	&apq8064_device_uart_gsbi5,
+#endif
 #endif
 	&apq8064_device_uart_gsbi7,
 	&msm_device_sps_apq8064,
@@ -3837,9 +3845,11 @@ static struct platform_device *mpq_devices[] __initdata = {
 	&rc_input_loopback_pdev,
 };
 
+#ifndef CONFIG_MACH_MITWO
 static struct msm_spi_platform_data apq8064_qup_spi_gsbi5_pdata = {
 	.max_clock_speed = 1100000,
 };
+#endif
 
 #define KS8851_IRQ_GPIO		43
 
@@ -3917,8 +3927,10 @@ static void __init apq8064_i2c_init(void)
 	struct clk *ifclk;
 #endif
 
+#ifndef CONFIG_MACH_MITWO
 	apq8064_device_qup_i2c_gsbi1.dev.platform_data =
 					&apq8064_i2c_qup_gsbi1_pdata;
+#endif
 	gsbi_mem = ioremap_nocache(MSM_GSBI1_PHYS, 4);
 	writel_relaxed(GSBI_DUAL_MODE_CODE, gsbi_mem);
 	/* Ensure protocol code is written before proceeding */
@@ -4758,7 +4770,11 @@ MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
 	.restart = msm_restart,
 MACHINE_END
 
+#ifdef CONFIG_MACH_MITWO
+MACHINE_START(APQ8064_MTP, "MI 2")
+#else
 MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
+#endif
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,

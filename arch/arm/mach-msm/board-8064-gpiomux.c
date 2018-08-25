@@ -1811,9 +1811,11 @@ void __init apq8064_init_gpiomux(void)
 			     ARRAY_SIZE(apq8064_sdc4_configs));
 #endif
 
+#ifndef CONFIG_MACH_MITWO
 	msm_gpiomux_install(apq8064_sdc3_configs,
 			ARRAY_SIZE(apq8064_sdc3_configs));
 	if (machine_is_mpq8064_hrd() || machine_is_mpq8064_dtv())
 		msm_gpiomux_install(mpq8064_uartdm_configs,
 				ARRAY_SIZE(mpq8064_uartdm_configs));
+#endif
 }

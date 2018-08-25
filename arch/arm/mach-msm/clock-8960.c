@@ -4356,7 +4356,7 @@ static struct rcg_clk vcodec_clk = {
 		.dbg_name = "vcodec_clk",
 		.ops = &clk_ops_rcg,
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
-				  HIGH, 266670000),
+				  HIGH, 228571000),
 		CLK_INIT(vcodec_clk.c),
 		.depends = &vcodec_axi_clk.c,
 	},
@@ -5631,8 +5631,10 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("vcodec_iommu0_clk", vcodec_axi_a_clk.c, "mdp.0"),
 	CLK_LOOKUP("vcodec_iommu1_clk", vcodec_axi_b_clk.c, "mdp.0"),
 	CLK_LOOKUP("smmu_iface_clk", smmu_p_clk.c,	"mdp.0"),
+#ifdef CONFIG_MACH_MITWO
 #ifdef CONFIG_AUDIENCE_ES310
 	CLK_LOOKUP("gp0_clk",		gp0_clk.c,	NULL),
+#endif
 #endif
 };
 

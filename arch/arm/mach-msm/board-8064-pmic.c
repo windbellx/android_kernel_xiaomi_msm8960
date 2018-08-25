@@ -173,7 +173,6 @@ static struct pm8xxx_gpio_init pm8921_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT(34, 0, MED),
 #endif
 	PM8921_GPIO_OUTPUT(13, 0, HIGH),               /* PCIE_CLK_PWR_EN */
-	PM8921_GPIO_INPUT(12, PM_GPIO_PULL_UP_30),     /* PCIE_WAKE_N */
 };
 
 static struct pm8xxx_gpio_init pm8921_mtp_kp_gpios[] __initdata = {
@@ -229,7 +228,7 @@ static struct pm8xxx_gpio_init pm8921_mpq_gpios[] __initdata = {
 static struct pm8xxx_mpp_init pm8xxx_mpps[] __initdata = {
 	PM8921_MPP_INIT(3, D_OUTPUT, PM8921_MPP_DIG_LEVEL_VPH, DOUT_CTRL_LOW),
 	/* External 5V regulator enable; shared by HDMI and USB_OTG switches. */
-	PM8921_MPP_INIT(7, D_OUTPUT, PM8921_MPP_DIG_LEVEL_VPH, DOUT_CTRL_LOW),
+	// PM8921_MPP_INIT(7, D_OUTPUT, PM8921_MPP_DIG_LEVEL_VPH, DOUT_CTRL_LOW),
 	PM8921_MPP_INIT(8, D_OUTPUT, PM8921_MPP_DIG_LEVEL_S4, DOUT_CTRL_LOW),
 	/*MPP9 is used to detect docking station connection/removal on Liquid*/
 	PM8921_MPP_INIT(9, D_INPUT, PM8921_MPP_DIG_LEVEL_S4, DIN_TO_INT),
@@ -346,7 +345,7 @@ static struct pm8xxx_misc_platform_data apq8064_pm8921_misc_pdata = {
 	.priority		= 0,
 };
 
-#define PM8921_LC_LED_MAX_CURRENT	12	/* I = 12mA */
+#define PM8921_LC_LED_MAX_CURRENT	4	/* I = 4mA */
 #define PM8921_LC_LED_LOW_CURRENT	1	/* I = 1mA */
 #define PM8XXX_LED_PWM_PERIOD		1000
 #ifdef CONFIG_MACH_MITWO
@@ -535,8 +534,8 @@ apq8064_pm8921_irq_pdata __devinitdata = {
 
 static struct pm8xxx_rtc_platform_data
 apq8064_pm8921_rtc_pdata = {
-	.rtc_write_enable       = false,
-	.rtc_alarm_powerup      = false,
+	.rtc_write_enable       = true,
+	.rtc_alarm_powerup      = true,
 };
 
 static int apq8064_pm8921_therm_mitigation[] = {
@@ -713,9 +712,9 @@ void __init apq8064_init_pmic(void)
 
 	if (machine_is_apq8064_mtp()) {
 #ifdef CONFIG_MACH_MITWO
-		apq8064_pm8921_bms_pdata.battery_type = BATT_PALLADIUM;
-#else
 		apq8064_pm8921_bms_pdata.battery_type = BATT_UNKNOWN;
+#else
+		apq8064_pm8921_bms_pdata.battery_type = BATT_PALLADIUM;
 #endif
 	} else if (machine_is_apq8064_liquid()) {
 		apq8064_pm8921_bms_pdata.battery_type = BATT_DESAY;

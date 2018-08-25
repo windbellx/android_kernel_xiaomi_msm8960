@@ -126,8 +126,11 @@ static int msm_fb_detect_panel(const char *name)
 					strnlen(MIPI_CMD_HITACHI_720P_PANEL_NAME,
 						PANEL_NAME_MAX_LEN)))
 			return 0;
-#endif
+	} else if (machine_is_apq8064_cdp() ||
+			machine_is_mpq8064_dtv()) {
+#else
 	} else if (machine_is_apq8064_cdp()) {
+#endif
 		if (!strncmp(name, LVDS_CHIMEI_PANEL_NAME,
 					strnlen(LVDS_CHIMEI_PANEL_NAME,
 						PANEL_NAME_MAX_LEN)))
